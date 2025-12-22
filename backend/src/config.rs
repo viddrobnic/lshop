@@ -22,6 +22,8 @@ pub struct Config {
 
     pub address: String,
     pub port: u16,
+
+    pub db_path: String,
 }
 
 impl Config {

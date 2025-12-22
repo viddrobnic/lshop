@@ -2,16 +2,17 @@ use axum::{Router, response::Html, routing::get};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing::Level;
+use tracing_subscriber::EnvFilter;
 
 use crate::config::Config;
 
 mod config;
+mod db;
 
 fn init_tracing(conf: &Config) {
     if conf.environment.is_dev() {
-        tracing_subscriber::fmt()
-            .with_max_level(Level::DEBUG)
-            .init();
+        let filter = EnvFilter::new("debug,sqlx=info");
+        tracing_subscriber::fmt().with_env_filter(filter).init();
     } else {
         tracing_subscriber::fmt()
             .json()
@@ -24,6 +25,8 @@ fn init_tracing(conf: &Config) {
 async fn main() -> anyhow::Result<()> {
     let conf = Config::new()?;
     init_tracing(&conf);
+
+    let db_pool = db::connect(&conf.db_path).await?;
 
     let app: Router = Router::new()
         .route("/", get(handler))
