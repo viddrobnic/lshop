@@ -4,12 +4,16 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-axum = "0.8"
+axum = { version = "0.8", features = ["macros"] }
 tokio = { version = "1", features = ["full"] }
 tower = { version = "0.4" }
 tower-http = { version = "0.6", features = ["trace"] }
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["fmt", "json", "env-filter"] }
+tracing-subscriber = { version = "0.3", features = [
+    "fmt",
+    "json",
+    "env-filter",
+] }
 serde = { version = "1", features = ["derive"] }
 config = { version = "0.15", features = ["toml"] }
 anyhow = "1"

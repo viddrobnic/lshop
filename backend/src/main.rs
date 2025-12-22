@@ -5,9 +5,11 @@ use tracing::Level;
 use tracing_subscriber::EnvFilter;
 
 use crate::config::Config;
+use state::AppState;
 
 mod config;
 mod db;
+mod state;
 
 fn init_tracing(conf: &Config) {
     if conf.environment.is_dev() {
@@ -28,12 +30,19 @@ async fn main() -> anyhow::Result<()> {
 
     let db_pool = db::connect(&conf.db_path).await?;
 
+    let state = AppState::new(db_pool, conf);
+
     let app: Router = Router::new()
         .route("/", get(handler))
-        .layer(TraceLayer::new_for_http());
+        .layer(TraceLayer::new_for_http())
+        .with_state(state.clone());
 
-    let listener = TcpListener::bind((conf.address.as_str(), conf.port)).await?;
-    tracing::info!("listening on {}:{}", conf.address, conf.port);
+    let listener = TcpListener::bind((state.config.address.as_str(), state.config.port)).await?;
+    tracing::info!(
+        "listening on {}:{}",
+        state.config.address,
+        state.config.port
+    );
     axum::serve(listener, app).await?;
 
     Ok(())
