@@ -25,3 +25,12 @@ sqlx = { version = "0.8", features = [
     "migrate",
     "time",
 ] }
+clap = { version = "4.5", features = ["derive"] }
+dialoguer = { version = "0.12", features = ["password"] }
+sea-query = { version = "1.0.0-rc.23", features = ["sqlx-utils"] }
+sea-query-sqlx = { version = "0.8.0-rc.10", features = [
+    "sqlx-sqlite",
+    "with-time",
+] }
+password-hash = { version = "0.5", features = ["std"] }
+argon2 = { version = "0.5", features = ["std"] }

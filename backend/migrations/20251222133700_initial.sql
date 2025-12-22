@@ -1,13 +1,13 @@
 CREATE TABLE users (
-    id            INT PRIMARY KEY,
-    username      TEXT NOT NULL,
+    id            INTEGER PRIMARY KEY,
+    username      TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     created_at    TEXT NOT NULL,
     updated_at    TEXT NOT NULL
 ) STRICT;
 
 CREATE TABLE user_sessions (
-    user_id      INT NOT NULL REFERENCES users(id) ON DELETE CASCADE, 
+    user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, 
     session_hash TEXT NOT NULL,
     expires_at   TEXT NOT NULL,
     created_at   TEXT NOT NULL
