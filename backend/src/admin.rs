@@ -17,7 +17,7 @@ pub async fn create_user(state: AppState) -> anyhow::Result<()> {
     let argon2 = Argon2::default();
     let pass_hash = argon2.hash_password(password.as_bytes(), &salt)?;
 
-    let res = store::user::create_user(state.db, &username, &pass_hash).await;
+    let res = store::user::create_user(&state.db, &username, &pass_hash).await;
     match res {
         Ok(_) => (),
         Err(sqlx::Error::Database(db)) => {
