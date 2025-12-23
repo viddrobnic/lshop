@@ -9,7 +9,12 @@ pub async fn start_server(state: AppState) -> anyhow::Result<()> {
     let app: Router = Router::new()
         .nest(
             "/api",
-            Router::new().nest("/auth", Router::new().route("/login", post(auth::login))),
+            Router::new().nest(
+                "/auth",
+                Router::new()
+                    .route("/login", post(auth::login))
+                    .route("/logout", post(auth::logout)),
+            ),
         )
         .layer(TraceLayer::new_for_http())
         .with_state(state.clone());

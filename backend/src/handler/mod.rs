@@ -31,4 +31,15 @@ impl Problem {
     pub fn new(status: StatusCode, message: String) -> Self {
         Self { status, message }
     }
+
+    pub fn internal() -> Self {
+        Problem::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Internal Server Error".to_string(),
+        )
+    }
+
+    pub fn invalid_credentials() -> Self {
+        Problem::new(StatusCode::UNAUTHORIZED, "Invalid credentials".to_string())
+    }
 }

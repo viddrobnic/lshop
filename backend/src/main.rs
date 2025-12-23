@@ -8,11 +8,13 @@ use crate::state::AppState;
 
 mod admin;
 mod app;
+mod auth;
 mod config;
 mod db;
 mod handler;
 mod state;
 mod store;
+mod util;
 
 #[derive(Debug, Parser)]
 struct Cli {

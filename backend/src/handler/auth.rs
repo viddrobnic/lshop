@@ -1,5 +1,3 @@
-use std::fmt::Write;
-
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use axum::Json;
 use axum::extract::State;
@@ -13,6 +11,8 @@ use rand::TryRngCore;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+use crate::auth::User;
+use crate::util::to_hex;
 use crate::{db::Db, handler::Problem, store};
 
 #[derive(Deserialize)]
@@ -44,13 +44,8 @@ pub struct Session {
 impl IntoResponse for LoginError {
     fn into_response(self) -> axum::response::Response {
         let problem = match self {
-            LoginError::InvalidCredentials => {
-                Problem::new(StatusCode::UNAUTHORIZED, "Invalid credentials".to_string())
-            }
-            LoginError::Internal => Problem::new(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Internal Server Error".to_string(),
-            ),
+            LoginError::InvalidCredentials => Problem::invalid_credentials(),
+            LoginError::Internal => Problem::internal(),
         };
         problem.into_response()
     }
@@ -94,13 +89,27 @@ pub async fn login(
     })?;
 
     // Set new cookie
-    let cookie = Cookie::build(("session", "TODO"))
+    let cookie = Cookie::build(("session", session.session.clone()))
         .path("/api")
         .secure(true)
         .http_only(true)
         .same_site(SameSite::Lax);
 
     Ok((jar.add(cookie), Json(session)))
+}
+
+pub async fn logout(
+    State(db): State<Db>,
+    user: User,
+    jar: CookieJar,
+) -> Result<(StatusCode, CookieJar), Problem> {
+    let res = store::user::delete_session(&db, &user.session_hash).await;
+    if let Err(err) = res {
+        tracing::error!(error = err.to_string(), "database error: {err}");
+        return Err(Problem::internal());
+    }
+
+    Ok((StatusCode::NO_CONTENT, jar.remove("session")))
 }
 
 async fn create_session(db: &Db, user_id: i64) -> Result<Session, sqlx::Error> {
@@ -119,12 +128,4 @@ async fn create_session(db: &Db, user_id: i64) -> Result<Session, sqlx::Error> {
         session: sess_str,
         expires_at,
     })
-}
-
-fn to_hex(bytes: &[u8]) -> String {
-    let mut s = String::with_capacity(bytes.len() * 2);
-    for &b in bytes {
-        write!(&mut s, "{:02x}", b).unwrap();
-    }
-    s
 }
