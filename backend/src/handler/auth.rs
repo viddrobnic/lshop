@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use axum::Json;
 use axum::extract::State;
@@ -5,7 +7,11 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::CookieJar;
 use axum_extra::extract::cookie::{Cookie, SameSite};
-use serde::Deserialize;
+use base64::Engine;
+use base64::prelude::BASE64_URL_SAFE_NO_PAD;
+use rand::TryRngCore;
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 use crate::{db::Db, handler::Problem, store};
 
@@ -27,6 +33,14 @@ pub enum LoginError {
     Internal,
 }
 
+#[derive(Serialize)]
+pub struct Session {
+    session: String,
+
+    #[serde(with = "time::serde::rfc3339")]
+    expires_at: time::OffsetDateTime,
+}
+
 impl IntoResponse for LoginError {
     fn into_response(self) -> axum::response::Response {
         let problem = match self {
@@ -46,7 +60,7 @@ pub async fn login(
     State(db): State<Db>,
     jar: CookieJar,
     Json(credentials): Json<Credentials>,
-) -> Result<(StatusCode, CookieJar), LoginError> {
+) -> Result<(CookieJar, Json<Session>), LoginError> {
     // Get user from db
     let user_res = store::user::get_user(&db, &credentials.username).await;
     let user = match user_res {
@@ -70,6 +84,15 @@ pub async fn login(
         return Err(LoginError::InvalidCredentials);
     }
 
+    // Create new session
+    let session = create_session(&db, user.id).await.map_err(|err| {
+        tracing::error!(
+            error = err.to_string(),
+            "database error during session generation: {err}"
+        );
+        LoginError::Internal
+    })?;
+
     // Set new cookie
     let cookie = Cookie::build(("session", "TODO"))
         .path("/api")
@@ -77,5 +100,31 @@ pub async fn login(
         .http_only(true)
         .same_site(SameSite::Lax);
 
-    Ok((StatusCode::NO_CONTENT, jar.add(cookie)))
+    Ok((jar.add(cookie), Json(session)))
+}
+
+async fn create_session(db: &Db, user_id: i64) -> Result<Session, sqlx::Error> {
+    let mut sess_bytes = [0u8; 64];
+    rand::rngs::OsRng
+        .try_fill_bytes(&mut sess_bytes)
+        .expect("random should not fail");
+
+    let sess_str = BASE64_URL_SAFE_NO_PAD.encode(sess_bytes);
+    let sess_hash = to_hex(&Sha256::digest(sess_bytes)[..]);
+    let expires_at = time::OffsetDateTime::now_utc() + time::Duration::days(30);
+
+    store::user::create_session(db, user_id, &sess_hash, expires_at).await?;
+
+    Ok(Session {
+        session: sess_str,
+        expires_at,
+    })
+}
+
+fn to_hex(bytes: &[u8]) -> String {
+    let mut s = String::with_capacity(bytes.len() * 2);
+    for &b in bytes {
+        write!(&mut s, "{:02x}", b).unwrap();
+    }
+    s
 }

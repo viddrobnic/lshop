@@ -9,3 +9,12 @@ pub enum Users {
     CreatedAt,
     UpdatedAt,
 }
+
+#[derive(Iden)]
+pub enum UserSessions {
+    Table,
+    UserId,
+    SessionHash,
+    ExpiresAt,
+    CreatedAt,
+}

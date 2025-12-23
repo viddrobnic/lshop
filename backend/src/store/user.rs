@@ -4,7 +4,7 @@ use sea_query_sqlx::SqlxBinder;
 use sqlx::prelude::FromRow;
 
 use crate::db::Db;
-use crate::store::table::Users;
+use crate::store::table::{UserSessions, Users};
 
 #[derive(FromRow)]
 pub struct User {
@@ -56,4 +56,32 @@ pub async fn get_user(db: &Db, username: &str) -> Result<Option<User>, sqlx::Err
         .build_sqlx(SqliteQueryBuilder);
 
     sqlx::query_as_with(&query, args).fetch_optional(db).await
+}
+
+pub async fn create_session(
+    db: &Db,
+    user_id: i64,
+    session_hash: &str,
+    expires_at: time::OffsetDateTime,
+) -> Result<(), sqlx::Error> {
+    let now = time::OffsetDateTime::now_utc();
+
+    let (query, args) = Query::insert()
+        .into_table(UserSessions::Table)
+        .columns([
+            UserSessions::UserId,
+            UserSessions::SessionHash,
+            UserSessions::ExpiresAt,
+            UserSessions::CreatedAt,
+        ])
+        .values_panic([
+            user_id.into(),
+            session_hash.into(),
+            expires_at.into(),
+            now.into(),
+        ])
+        .build_sqlx(SqliteQueryBuilder);
+
+    sqlx::query_with(&query, args).execute(db).await?;
+    Ok(())
 }
