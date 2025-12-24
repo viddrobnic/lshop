@@ -14,3 +14,34 @@ CREATE TABLE user_sessions (
 ) STRICT;
 
 CREATE INDEX user_session_hash_idx ON user_sessions(session_hash);
+
+
+CREATE TABLE stores (
+    id   INTEGER PRIMARY KEY,
+    name TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE sections (
+    id       INTEGER PRIMARY KEY,
+    store_id INTEGER NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+
+    name     TEXT NOT NULL,
+    ord      INTEGER NOT NULL
+) STRICT;
+
+CREATE INDEX sections_store_id_order_idx ON sections(store_id, ord);
+
+CREATE TABLE items (
+    id         INTEGER PRIMARY KEY,
+    store_id   INTEGER REFERENCES stores(id) ON DELETE SET NULL,
+    section_id INTEGER REFERENCES sections(id) ON DELETE SET NULL,
+
+    name       TEXT NOT NULL,
+    checked    BOOLEAN NOT NULL DEFAULT FALSE,
+
+    ord        INTEGER NOT NULL
+);
+
+CREATE INDEX items_all_idx ON items(checked, ord);
+CREATE INDEX items_for_store_idx ON items(store_id, checked, ord);
+CREATE INDEX items_for_section_idx ON items(section_id, checked, ord);
