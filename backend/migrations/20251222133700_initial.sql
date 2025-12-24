@@ -15,16 +15,21 @@ CREATE TABLE user_sessions (
 
 
 CREATE TABLE stores (
-    id   INTEGER PRIMARY KEY NOT NULL,
-    name TEXT NOT NULL
+    id         INTEGER PRIMARY KEY NOT NULL,
+    name       TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
 ) STRICT;
 
 CREATE TABLE sections (
-    id       INTEGER PRIMARY KEY NOT NULL,
-    store_id INTEGER NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+    id         INTEGER PRIMARY KEY NOT NULL,
+    store_id   INTEGER NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
 
-    name     TEXT NOT NULL,
-    ord      INTEGER NOT NULL
+    name       TEXT NOT NULL,
+    ord        INTEGER NOT NULL,
+
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
 ) STRICT;
 
 CREATE INDEX sections_store_id_order_idx ON sections(store_id, ord);
@@ -37,7 +42,10 @@ CREATE TABLE items (
     name       TEXT NOT NULL,
     checked    BOOLEAN NOT NULL DEFAULT FALSE,
 
-    ord        INTEGER NOT NULL
+    ord        INTEGER NOT NULL,
+
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
 );
 
 CREATE INDEX items_all_idx ON items(checked, ord);

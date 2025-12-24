@@ -2,6 +2,7 @@ use axum::{Json, http::StatusCode, response::IntoResponse};
 use serde::{Serialize, ser::SerializeStruct};
 
 pub mod auth;
+pub mod store;
 
 pub struct Problem {
     pub status: StatusCode,
@@ -41,5 +42,9 @@ impl Problem {
 
     pub fn invalid_credentials() -> Self {
         Problem::new(StatusCode::UNAUTHORIZED, "Invalid credentials".to_string())
+    }
+
+    pub fn not_found() -> Self {
+        Problem::new(StatusCode::NOT_FOUND, "Not found".to_string())
     }
 }
