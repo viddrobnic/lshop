@@ -1,5 +1,5 @@
 use axum::Router;
-use axum::routing::post;
+use axum::routing::{get, post};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 
@@ -13,7 +13,8 @@ pub async fn start_server(state: AppState) -> anyhow::Result<()> {
                 "/auth",
                 Router::new()
                     .route("/login", post(auth::login))
-                    .route("/logout", post(auth::logout)),
+                    .route("/logout", post(auth::logout))
+                    .route("/me", get(auth::me)),
             ),
         )
         .layer(TraceLayer::new_for_http())

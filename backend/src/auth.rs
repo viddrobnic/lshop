@@ -3,6 +3,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::CookieJar;
 use base64::prelude::*;
+use serde::Serialize;
 use sha2::{Digest, Sha256};
 
 use crate::db::Db;
@@ -11,11 +12,18 @@ use crate::state::AppState;
 use crate::store;
 use crate::util::to_hex;
 
+#[derive(Serialize)]
 pub struct User {
     pub id: i64,
     pub username: String,
+
+    #[serde(skip_serializing)]
     pub session_hash: String,
+
+    #[serde(with = "time::serde::rfc3339")]
     pub created_at: time::OffsetDateTime,
+
+    #[serde(with = "time::serde::rfc3339")]
     pub updated_at: time::OffsetDateTime,
 }
 

@@ -1,10 +1,7 @@
 use password_hash::PasswordHash;
-use sea_query::{Expr, ExprTrait, Query, SqliteQueryBuilder};
-use sea_query_sqlx::SqlxBinder;
 use sqlx::prelude::FromRow;
 
 use crate::db::Db;
-use crate::store::table::{UserSessions, Users};
 
 #[derive(FromRow)]
 pub struct User {
@@ -21,41 +18,28 @@ pub async fn create_user(
     password_hash: &PasswordHash<'_>,
 ) -> Result<(), sqlx::Error> {
     let now = time::OffsetDateTime::now_utc();
+    let pass_hash_str = password_hash.to_string();
 
-    let (query, args) = Query::insert()
-        .into_table(Users::Table)
-        .columns([
-            Users::Username,
-            Users::PasswordHash,
-            Users::CreatedAt,
-            Users::UpdatedAt,
-        ])
-        .values_panic([
-            username.into(),
-            password_hash.to_string().into(),
-            now.into(),
-            now.into(),
-        ])
-        .build_sqlx(SqliteQueryBuilder);
+    sqlx::query(
+        "INSERT INTO users
+            (username, password_hash, created_at, updated_at) 
+        VALUES (?, ?, ?, ?)",
+    )
+    .bind(username)
+    .bind(pass_hash_str)
+    .bind(now)
+    .bind(now)
+    .execute(db)
+    .await?;
 
-    sqlx::query_with(&query, args).execute(db).await?;
     Ok(())
 }
 
 pub async fn get_user(db: &Db, username: &str) -> Result<Option<User>, sqlx::Error> {
-    let (query, args) = Query::select()
-        .columns([
-            Users::Id,
-            Users::Username,
-            Users::PasswordHash,
-            Users::CreatedAt,
-            Users::UpdatedAt,
-        ])
-        .from(Users::Table)
-        .and_where(Expr::col(Users::Username).eq(username))
-        .build_sqlx(SqliteQueryBuilder);
-
-    sqlx::query_as_with(&query, args).fetch_optional(db).await
+    sqlx::query_as("SELECT * FROM users WHERE username = ?")
+        .bind(username)
+        .fetch_optional(db)
+        .await
 }
 
 pub async fn create_session(
@@ -66,55 +50,40 @@ pub async fn create_session(
 ) -> Result<(), sqlx::Error> {
     let now = time::OffsetDateTime::now_utc();
 
-    let (query, args) = Query::insert()
-        .into_table(UserSessions::Table)
-        .columns([
-            UserSessions::UserId,
-            UserSessions::SessionHash,
-            UserSessions::ExpiresAt,
-            UserSessions::CreatedAt,
-        ])
-        .values_panic([
-            user_id.into(),
-            session_hash.into(),
-            expires_at.into(),
-            now.into(),
-        ])
-        .build_sqlx(SqliteQueryBuilder);
+    sqlx::query(
+        "INSERT INTO user_sessions 
+            (user_id, session_hash, expires_at, created_at)
+        VALUES (?, ?, ?, ?)",
+    )
+    .bind(user_id)
+    .bind(session_hash)
+    .bind(expires_at)
+    .bind(now)
+    .execute(db)
+    .await?;
 
-    sqlx::query_with(&query, args).execute(db).await?;
     Ok(())
 }
 
 pub async fn get_session(db: &Db, session_hash: &str) -> Result<Option<User>, sqlx::Error> {
     let now = time::OffsetDateTime::now_utc();
 
-    let (query, args) = Query::select()
-        .columns([
-            (Users::Table, Users::Id),
-            (Users::Table, Users::Username),
-            (Users::Table, Users::PasswordHash),
-            (Users::Table, Users::CreatedAt),
-            (Users::Table, Users::UpdatedAt),
-        ])
-        .from(Users::Table)
-        .inner_join(
-            UserSessions::Table,
-            Expr::col(Users::Id).equals(UserSessions::UserId),
-        )
-        .and_where(Expr::col(UserSessions::SessionHash).eq(session_hash))
-        .and_where(Expr::col(UserSessions::ExpiresAt).gt(now))
-        .build_sqlx(SqliteQueryBuilder);
-
-    sqlx::query_as_with(&query, args).fetch_optional(db).await
+    sqlx::query_as(
+        "SELECT u.* FROM users u 
+         INNER JOIN user_sessions sess ON u.id = sess.user_id
+         WHERE sess.session_hash = ? 
+            AND sess.expires_at > ?",
+    )
+    .bind(session_hash)
+    .bind(now)
+    .fetch_optional(db)
+    .await
 }
 
 pub async fn delete_session(db: &Db, session_hash: &str) -> Result<(), sqlx::Error> {
-    let (query, args) = Query::delete()
-        .from_table(UserSessions::Table)
-        .and_where(Expr::col(UserSessions::SessionHash).eq(session_hash))
-        .build_sqlx(SqliteQueryBuilder);
-
-    sqlx::query_with(&query, args).execute(db).await?;
+    sqlx::query("DELETE FROM user_sessions WHERE session_hash = ?")
+        .bind(session_hash)
+        .execute(db)
+        .await?;
     Ok(())
 }

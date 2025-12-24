@@ -23,6 +23,8 @@ enum AuthType {
 
 #[derive(Deserialize)]
 pub struct Credentials {
+    // auth_type is future compatibility, we don't use it yet
+    #[allow(unused)]
     auth_type: AuthType,
     username: String,
     password: String,
@@ -110,6 +112,10 @@ pub async fn logout(
     }
 
     Ok((StatusCode::NO_CONTENT, jar.remove("session")))
+}
+
+pub async fn me(user: User) -> Json<User> {
+    Json(user)
 }
 
 async fn create_session(db: &Db, user_id: i64) -> Result<Session, sqlx::Error> {
