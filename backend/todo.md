@@ -7,8 +7,7 @@ The following endpoints have to be implemented
 - [x] create
 - [x] list
 - [x] update (rename)
-- [ ] delete
-- [ ] reorder
+- [x] delete
 
 ## Section
 

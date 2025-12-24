@@ -54,3 +54,11 @@ pub async fn update(db: &Db, id: i64, name: &str) -> Result<Store, sqlx::Error> 
     .fetch_one(db)
     .await
 }
+
+pub async fn delete(db: &Db, id: i64) -> Result<(), sqlx::Error> {
+    sqlx::query("DELETE FROM stores WHERE id = ?")
+        .bind(id)
+        .execute(db)
+        .await?;
+    Ok(())
+}

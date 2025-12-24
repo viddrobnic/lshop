@@ -22,7 +22,7 @@ pub async fn start_server(state: AppState) -> anyhow::Result<()> {
                     "/stores",
                     Router::new()
                         .route("/", post(store::create).get(store::list))
-                        .route("/{id}", put(store::update)),
+                        .route("/{id}", put(store::update).delete(store::delete)),
                 ),
         )
         .layer(TraceLayer::new_for_http())
