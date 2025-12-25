@@ -15,7 +15,7 @@ The following endpoints have to be implemented
 - [x] list
 - [x] update (rename)
 - [x] delete
-- [ ] reorder (inside store)
+- [x] reorder (inside store)
 
 ## Item
 

@@ -27,9 +27,11 @@ pub async fn start_server(state: AppState) -> anyhow::Result<()> {
                         .route("/{store_id}", put(store::update).delete(store::delete)),
                 )
                 // Sections
-                .route(
+                .nest(
                     "/stores/{store_id}/sections",
-                    get(section::list).post(section::create),
+                    Router::new()
+                        .route("/", get(section::list).post(section::create))
+                        .route("/reorder", put(section::reorder)),
                 )
                 .nest(
                     "/sections",

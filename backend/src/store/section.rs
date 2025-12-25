@@ -82,3 +82,26 @@ pub async fn delete(db: &Db, id: i64) -> Result<(), sqlx::Error> {
         .await?;
     Ok(())
 }
+
+pub async fn reorder(db: &Db, ids: &[i64]) -> Result<(), sqlx::Error> {
+    let now = time::OffsetDateTime::now_utc();
+
+    let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new("WITH new_order(id, new_ord) AS (");
+
+    qb.push_values(ids.iter().enumerate(), |mut b, (idx, id)| {
+        b.push_bind(*id).push_bind(idx as i64 + 1);
+    });
+
+    qb.push(
+        ") UPDATE sections 
+           SET ord = new_order.new_ord, updated_at =",
+    );
+    qb.push_bind(now);
+    qb.push(
+        "FROM new_order 
+         WHERE sections.id = new_order.id",
+    );
+
+    qb.build().execute(db).await?;
+    Ok(())
+}

@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use axum::{
     Json,
     extract::{Path, State},
@@ -84,6 +86,46 @@ pub async fn delete(
             Err(Problem::internal())
         }
     }
+}
+
+#[derive(Deserialize)]
+pub struct ReorderReq {
+    pub ids: Vec<i64>,
+}
+
+pub async fn reorder(
+    State(db): State<Db>,
+    Path(store_id): Path<i64>,
+    u: User,
+    Json(req): Json<ReorderReq>,
+) -> Result<Json<Vec<Section>>, Problem> {
+    check_store_exists(&db, store_id).await?;
+
+    // Validate ids are correct. This means that the array has exactly all store sections
+    let existing = store::section::list(&db, store_id).await.map_err(|err| {
+        tracing::error!(error = err.to_string(), "database error: {err}");
+        Problem::internal()
+    })?;
+    let existing_ids: HashSet<_> = existing.into_iter().map(|s| s.id).collect();
+
+    let id_set: HashSet<i64> = HashSet::from_iter(req.ids.iter().copied());
+
+    if existing_ids != id_set {
+        return Err(Problem::new(
+            StatusCode::BAD_REQUEST,
+            "invalid section ids".to_string(),
+        ));
+    }
+
+    // Update and return
+    store::section::reorder(&db, &req.ids)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = err.to_string(), "database error: {err}");
+            Problem::internal()
+        })?;
+
+    list(State(db), Path(store_id), u).await
 }
 
 async fn check_store_exists(db: &Db, store_id: i64) -> Result<(), Problem> {
