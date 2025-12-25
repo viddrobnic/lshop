@@ -34,7 +34,7 @@ pub async fn create(db: &Db, name: &str) -> Result<Store, sqlx::Error> {
 }
 
 pub async fn list(db: &Db) -> Result<Vec<Store>, sqlx::Error> {
-    sqlx::query_as("SELECT * FROM stores ORDER BY name ASC, updated_at ASC")
+    sqlx::query_as("SELECT * FROM stores ORDER BY name ASC, updated_at DESC")
         .fetch_all(db)
         .await
 }

@@ -53,7 +53,7 @@ pub async fn create(db: &Db, store_id: i64, name: &str) -> Result<Section, sqlx:
 }
 
 pub async fn list(db: &Db, store_id: i64) -> Result<Vec<Section>, sqlx::Error> {
-    sqlx::query_as("SELECT * FROM sections WHERE store_id = ? ORDER BY ord ASC")
+    sqlx::query_as("SELECT * FROM sections WHERE store_id = ? ORDER BY ord ASC, updated_at DESC")
         .bind(store_id)
         .fetch_all(db)
         .await
