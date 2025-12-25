@@ -62,3 +62,10 @@ pub async fn delete(db: &Db, id: i64) -> Result<(), sqlx::Error> {
         .await?;
     Ok(())
 }
+
+pub async fn get(db: &Db, id: i64) -> Result<Option<Store>, sqlx::Error> {
+    sqlx::query_as("SELECT * FROM stores WHERE id = ?")
+        .bind(id)
+        .fetch_optional(db)
+        .await
+}

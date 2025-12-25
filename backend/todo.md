@@ -11,10 +11,10 @@ The following endpoints have to be implemented
 
 ## Section
 
-- [ ] create
-- [ ] list
-- [ ] update (rename)
-- [ ] delete
+- [x] create
+- [x] list
+- [x] update (rename)
+- [x] delete
 - [ ] reorder (inside store)
 
 ## Item

@@ -2,6 +2,7 @@ use axum::{Json, http::StatusCode, response::IntoResponse};
 use serde::{Serialize, ser::SerializeStruct};
 
 pub mod auth;
+pub mod section;
 pub mod store;
 
 pub struct Problem {
