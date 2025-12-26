@@ -4,7 +4,7 @@ use sqlx::{Executor, Sqlite};
 
 use crate::db::Db;
 
-#[derive(FromRow, Serialize)]
+#[derive(Debug, FromRow, Serialize)]
 pub struct Item {
     pub id: i64,
     pub store_id: Option<i64>,
@@ -12,6 +12,9 @@ pub struct Item {
 
     pub name: String,
     pub checked: bool,
+
+    #[serde(skip)]
+    pub ord: i64,
 
     #[serde(with = "time::serde::rfc3339")]
     pub created_at: time::OffsetDateTime,
@@ -48,6 +51,10 @@ pub async fn create(
     tx.commit().await?;
 
     Ok(item)
+}
+
+pub async fn list(db: &Db) -> Result<Vec<Item>, sqlx::Error> {
+    sqlx::query_as("SELECT * FROM items").fetch_all(db).await
 }
 
 async fn max_ord<'c, E: Executor<'c, Database = Sqlite>>(

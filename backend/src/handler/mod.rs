@@ -50,3 +50,10 @@ impl Problem {
         Problem::new(StatusCode::NOT_FOUND, "Not found".to_string())
     }
 }
+
+impl From<sqlx::Error> for Problem {
+    fn from(err: sqlx::Error) -> Self {
+        tracing::error!(error = err.to_string(), "database error: {err}");
+        Problem::internal()
+    }
+}

@@ -20,7 +20,7 @@ The following endpoints have to be implemented
 ## Item
 
 - [x] create
-- [ ] list -> returns all grouped by stores and sections, ie
+- [x] list -> returns all grouped by stores and sections, ie
 
   ```json
   {

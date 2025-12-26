@@ -102,10 +102,7 @@ pub async fn reorder(
     check_store_exists(&db, store_id).await?;
 
     // Validate ids are correct. This means that the array has exactly all store sections
-    let existing = store::section::list(&db, store_id).await.map_err(|err| {
-        tracing::error!(error = err.to_string(), "database error: {err}");
-        Problem::internal()
-    })?;
+    let existing = store::section::list(&db, store_id).await?;
     let existing_ids: HashSet<_> = existing.into_iter().map(|s| s.id).collect();
 
     let id_set: HashSet<i64> = HashSet::from_iter(req.ids.iter().copied());
@@ -118,12 +115,7 @@ pub async fn reorder(
     }
 
     // Update and return
-    store::section::reorder(&db, &req.ids)
-        .await
-        .map_err(|err| {
-            tracing::error!(error = err.to_string(), "database error: {err}");
-            Problem::internal()
-        })?;
+    store::section::reorder(&db, &req.ids).await?;
 
     list(State(db), Path(store_id), u).await
 }

@@ -1,13 +1,19 @@
 use serde::Serialize;
-use sqlx::prelude::{FromRow, Row};
+use sqlx::{
+    QueryBuilder, Sqlite,
+    prelude::{FromRow, Row},
+};
 
 use crate::db::Db;
 
-#[derive(FromRow, Serialize)]
+#[derive(Debug, Clone, FromRow, Serialize)]
 pub struct Section {
     pub id: i64,
     pub store_id: i64,
     pub name: String,
+
+    #[serde(skip)]
+    pub ord: i64,
 
     #[serde(with = "time::serde::rfc3339")]
     pub created_at: time::OffsetDateTime,
@@ -45,6 +51,7 @@ pub async fn create(db: &Db, store_id: i64, name: &str) -> Result<Section, sqlx:
         id,
         store_id,
         name: name.to_string(),
+        ord,
         created_at: now,
         updated_at: now,
     })
@@ -109,4 +116,21 @@ pub async fn get(db: &Db, id: i64) -> Result<Option<Section>, sqlx::Error> {
         .bind(id)
         .fetch_optional(db)
         .await
+}
+
+pub async fn list_for_ids(
+    db: &Db,
+    ids: impl Iterator<Item = i64>,
+) -> Result<Vec<Section>, sqlx::Error> {
+    let mut ids = ids.peekable();
+    if ids.peek().is_none() {
+        return Ok(vec![]);
+    }
+
+    let mut qb = QueryBuilder::<Sqlite>::new("SELECT * FROM sections WHERE id IN ");
+    qb.push_tuples(ids, |mut b, id| {
+        b.push_bind(id);
+    });
+
+    qb.build_query_as().fetch_all(db).await
 }

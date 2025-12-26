@@ -38,7 +38,10 @@ pub async fn start_server(state: AppState) -> anyhow::Result<()> {
                     Router::new().route("/{id}", put(section::update).delete(section::delete)),
                 )
                 // Items
-                .nest("/items", Router::new().route("/", post(item::create))),
+                .nest(
+                    "/items",
+                    Router::new().route("/", get(item::list).post(item::create)),
+                ),
         )
         .layer(TraceLayer::new_for_http())
         .with_state(state.clone());
