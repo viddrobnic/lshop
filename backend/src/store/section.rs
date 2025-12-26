@@ -8,7 +8,6 @@ pub struct Section {
     pub id: i64,
     pub store_id: i64,
     pub name: String,
-    pub ord: i64,
 
     #[serde(with = "time::serde::rfc3339")]
     pub created_at: time::OffsetDateTime,
@@ -46,7 +45,6 @@ pub async fn create(db: &Db, store_id: i64, name: &str) -> Result<Section, sqlx:
         id,
         store_id,
         name: name.to_string(),
-        ord,
         created_at: now,
         updated_at: now,
     })
@@ -104,4 +102,11 @@ pub async fn reorder(db: &Db, ids: &[i64]) -> Result<(), sqlx::Error> {
 
     qb.build().execute(db).await?;
     Ok(())
+}
+
+pub async fn get(db: &Db, id: i64) -> Result<Option<Section>, sqlx::Error> {
+    sqlx::query_as("SELECT * FROM sections WHERE id = ?")
+        .bind(id)
+        .fetch_optional(db)
+        .await
 }

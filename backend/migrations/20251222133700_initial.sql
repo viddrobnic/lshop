@@ -21,6 +21,8 @@ CREATE TABLE stores (
     updated_at TEXT NOT NULL
 ) STRICT;
 
+CREATE INDEX stores_name_idx ON stores(name);
+
 CREATE TABLE sections (
     id         INTEGER PRIMARY KEY NOT NULL,
     store_id   INTEGER NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
@@ -48,6 +50,4 @@ CREATE TABLE items (
     updated_at TEXT NOT NULL
 );
 
-CREATE INDEX items_all_idx ON items(checked, ord);
-CREATE INDEX items_for_store_idx ON items(store_id, checked, ord);
-CREATE INDEX items_for_section_idx ON items(section_id, checked, ord);
+CREATE INDEX items_ord_idx ON items(checked, store_id, section_id, ord);

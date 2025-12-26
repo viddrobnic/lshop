@@ -3,7 +3,7 @@ use axum::routing::{get, post, put};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 
-use crate::handler::{auth, section, store};
+use crate::handler::{auth, item, section, store};
 use crate::state::AppState;
 
 pub async fn start_server(state: AppState) -> anyhow::Result<()> {
@@ -36,7 +36,9 @@ pub async fn start_server(state: AppState) -> anyhow::Result<()> {
                 .nest(
                     "/sections",
                     Router::new().route("/{id}", put(section::update).delete(section::delete)),
-                ),
+                )
+                // Items
+                .nest("/items", Router::new().route("/", post(item::create))),
         )
         .layer(TraceLayer::new_for_http())
         .with_state(state.clone());
