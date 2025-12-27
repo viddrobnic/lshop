@@ -54,7 +54,21 @@ pub async fn create(
 }
 
 pub async fn list(db: &Db) -> Result<Vec<Item>, sqlx::Error> {
-    sqlx::query_as("SELECT * FROM items").fetch_all(db).await
+    sqlx::query_as("SELECT * FROM items WHERE checked = FALSE")
+        .fetch_all(db)
+        .await
+}
+
+pub async fn unassigned_for_store(db: &Db, store_id: i64) -> Result<Vec<Item>, sqlx::Error> {
+    sqlx::query_as(
+        "SELECT * FROM items 
+         WHERE store_id = ? 
+           AND section_id IS NULL 
+           AND checked = FALSE",
+    )
+    .bind(store_id)
+    .fetch_all(db)
+    .await
 }
 
 async fn max_ord<'c, E: Executor<'c, Database = Sqlite>>(
@@ -62,12 +76,16 @@ async fn max_ord<'c, E: Executor<'c, Database = Sqlite>>(
     store_id: Option<i64>,
     section_id: Option<i64>,
 ) -> Result<i64, sqlx::Error> {
-    let curr_ord: i64 =
-        sqlx::query("SELECT MAX(ord) FROM items WHERE store_id IS ? AND section_id IS ?")
-            .bind(store_id)
-            .bind(section_id)
-            .fetch_one(e)
-            .await?
-            .get(0);
+    let curr_ord: i64 = sqlx::query(
+        "SELECT MAX(ord) FROM items 
+         WHERE store_id IS ? 
+           AND section_id IS ? 
+           AND checked = FALSE",
+    )
+    .bind(store_id)
+    .bind(section_id)
+    .fetch_one(e)
+    .await?
+    .get(0);
     Ok(curr_ord)
 }

@@ -97,7 +97,6 @@ pub async fn list(State(db): State<Db>, _: User) -> Result<Json<ItemList>, Probl
 
     let store_ids: HashSet<i64> = items.iter().filter_map(|it| it.store_id).collect();
     let stores = store::shop::list_for_ids(&db, store_ids.iter().cloned()).await?;
-    println!("stores: {stores:#?}");
 
     let section_ids: HashSet<i64> = items.iter().filter_map(|it| it.section_id).collect();
     let sections = store::section::list_for_ids(&db, section_ids.iter().cloned()).await?;

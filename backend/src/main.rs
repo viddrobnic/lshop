@@ -33,8 +33,14 @@ async fn main() -> anyhow::Result<()> {
 
     let conf = Config::new()?;
     init_tracing(&conf);
+
     let db_pool = db::connect(&conf.db_path).await?;
-    let state = AppState::new(db_pool, conf);
+
+    let openai_config =
+        async_openai::config::OpenAIConfig::new().with_api_key(&conf.openai_api_key);
+    let openai = async_openai::Client::with_config(openai_config);
+
+    let state = AppState::new(db_pool, conf, openai);
 
     match cli.command {
         None => start_server(state).await,

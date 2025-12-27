@@ -24,6 +24,8 @@ pub struct Config {
     pub port: u16,
 
     pub db_path: String,
+
+    pub openai_api_key: String,
 }
 
 impl Config {

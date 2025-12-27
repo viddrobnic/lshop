@@ -3,6 +3,7 @@ use serde::{Serialize, ser::SerializeStruct};
 
 pub mod auth;
 pub mod item;
+pub mod organize;
 pub mod section;
 pub mod store;
 

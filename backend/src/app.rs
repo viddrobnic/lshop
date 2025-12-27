@@ -3,11 +3,11 @@ use axum::routing::{get, post, put};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 
-use crate::handler::{auth, item, section, store};
+use crate::handler::{auth, item, organize, section, store};
 use crate::state::AppState;
 
-pub async fn start_server(state: AppState) -> anyhow::Result<()> {
-    let app: Router = Router::new()
+fn create_app(state: AppState) -> Router {
+    Router::new()
         .nest(
             "/api",
             Router::new()
@@ -41,11 +41,16 @@ pub async fn start_server(state: AppState) -> anyhow::Result<()> {
                 .nest(
                     "/items",
                     Router::new().route("/", get(item::list).post(item::create)),
-                ),
+                )
+                // Organize
+                .route("/stores/{store_id}/organize", post(organize::organize)),
         )
         .layer(TraceLayer::new_for_http())
-        .with_state(state.clone());
+        .with_state(state)
+}
 
+pub async fn start_server(state: AppState) -> anyhow::Result<()> {
+    let app = create_app(state.clone());
     let listener = TcpListener::bind((state.config.address.as_str(), state.config.port)).await?;
     tracing::info!(
         "listening on {}:{}",

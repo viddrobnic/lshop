@@ -2,3 +2,5 @@ address = "127.0.0.1"
 port = 8000
 
 db_path = "sqlite://data.db"
+
+openai_api_key = "<your key>"
