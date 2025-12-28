@@ -29,6 +29,7 @@ enum Command {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    dotenvy::dotenv()?;
     let cli = Cli::parse();
 
     let conf = Config::new()?;
