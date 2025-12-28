@@ -1,10 +1,20 @@
-use async_openai::types::responses::{
-    CreateResponseArgs, ReasoningEffort, ResponseFormatJsonSchema,
+use async_openai::{
+    error::OpenAIError,
+    types::responses::{CreateResponseArgs, ReasoningEffort, ResponseFormatJsonSchema},
 };
-use axum::extract::{Path, State};
-use serde::Serialize;
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+};
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
-use crate::{auth::User, handler::Problem, state::AppState, store};
+use crate::{
+    auth::User,
+    handler::Problem,
+    state::{AppState, OpenAiClient},
+    store,
+};
 
 #[derive(Serialize)]
 struct PromptItem {
@@ -36,16 +46,56 @@ struct Prompt {
     sections: Vec<PromptItem>,
 }
 
+#[derive(Debug, Deserialize)]
+struct Categorization {
+    section_id: i64,
+    item_id: i64,
+}
+
+#[derive(Debug, Deserialize)]
+struct CategorizationResponse {
+    categorized: Vec<Categorization>,
+}
+
 pub async fn organize(
     State(state): State<AppState>,
     Path(store_id): Path<i64>,
     _: User,
-) -> Result<(), Problem> {
+) -> Result<StatusCode, Problem> {
     let (items, sections) = tokio::try_join!(
         store::item::unassigned_for_store(&state.db, store_id),
         store::section::list(&state.db, store_id),
     )?;
 
+    let categorized = openai_organize(&state.openai, items, sections)
+        .await
+        .map_err(|err| {
+            tracing::error!(
+                error = err.to_string(),
+                "error during ai categorization: {err}"
+            );
+            Problem::internal()
+        })?;
+
+    // TODO: Save to db
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Debug, Error)]
+enum PromptError {
+    #[error("openai error")]
+    OpenAi(#[from] OpenAIError),
+
+    #[error("invalid response recieved")]
+    InvalidResponse(#[from] serde_json::Error),
+}
+
+async fn openai_organize(
+    openai: &OpenAiClient,
+    items: Vec<store::item::Item>,
+    sections: Vec<store::section::Section>,
+) -> Result<CategorizationResponse, PromptError> {
     let schema = serde_json::json!({
         "type": "object",
         "required": ["categorized"],
@@ -73,11 +123,15 @@ pub async fn organize(
         "additionalProperties": false,
     });
 
-    let prompt = Prompt {
+    let prompt_data = Prompt {
         items: items.into_iter().map(|it| it.into()).collect(),
         sections: sections.into_iter().map(|sec| sec.into()).collect(),
     };
-    let prompt = serde_json::to_string(&prompt).expect("prompt should be valid json");
+    let prompt_data = serde_json::to_string(&prompt_data).expect("prompt should be valid json");
+
+    let prompt = format!(
+        "You are a helpful store manager assistant. You are given a list of store sections and items. Your task is to organize the items into sections and return the mapping.\n\nEach item can be in at most one section. If an item doesn't belong in any of the sections, ignore it.\n\n{prompt_data}"
+    );
 
     let request = CreateResponseArgs::default()
         .model("gpt-5-mini")
@@ -88,29 +142,17 @@ pub async fn organize(
             schema: Some(schema),
             strict: Some(true),
         })
-        .input(format!(
-            "You are a helpful store manager assistant. You are given a list of store sections and items. Your task is to organize the items into sections and return the mapping.\n\nEach item can be in at most one section. If an item doesn't belong in any of the sections, ignore it.\n\n{prompt}"
-        ))
-        .build()
-        .map_err(|err| {
-            tracing::error!(error = err.to_string(), "openai request build error: {err}");
-            Problem::internal()
-        })?;
+        .input(prompt)
+        .build()?;
 
-    let response = state
-        .openai
-        .responses()
-        .create(request)
-        .await
-        .map_err(|err| {
-            tracing::error!(
-                error = err.to_string(),
-                "openai create response error: {err}"
-            );
-            Problem::internal()
-        })?;
+    let response = openai.responses().create(request).await?;
 
-    println!("{:#?}", response.output);
+    let Some(response_text) = response.output_text() else {
+        return Ok(CategorizationResponse {
+            categorized: vec![],
+        });
+    };
 
-    Ok(())
+    let categorized = serde_json::from_str(&response_text)?;
+    Ok(categorized)
 }
