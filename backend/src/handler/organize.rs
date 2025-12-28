@@ -1,3 +1,5 @@
+use std::collections::{HashMap, HashSet};
+
 use async_openai::{
     error::OpenAIError,
     types::responses::{CreateResponseArgs, ReasoningEffort, ResponseFormatJsonSchema},
@@ -67,6 +69,9 @@ pub async fn organize(
         store::section::list(&state.db, store_id),
     )?;
 
+    let valid_item_ids: HashSet<_> = items.iter().map(|sec| sec.id).collect();
+    let valid_section_ids: HashSet<_> = sections.iter().map(|sec| sec.id).collect();
+
     let categorized = openai_organize(&state.openai, items, sections)
         .await
         .map_err(|err| {
@@ -77,7 +82,35 @@ pub async fn organize(
             Problem::internal()
         })?;
 
-    // TODO: Save to db
+    // section id -> [item ids]
+    let mut update_map: HashMap<i64, Vec<i64>> = HashMap::new();
+    for cat in categorized.categorized {
+        if !valid_item_ids.contains(&cat.item_id) {
+            tracing::info!(
+                item_id = cat.item_id,
+                section_id = cat.section_id,
+                "llm organizer returned invalid item id: {}",
+                cat.item_id
+            );
+            continue;
+        }
+        if !valid_section_ids.contains(&cat.section_id) {
+            tracing::info!(
+                item_id = cat.item_id,
+                section_id = cat.section_id,
+                "llm organizer returned invalid section id: {}",
+                cat.section_id
+            );
+            continue;
+        }
+
+        update_map
+            .entry(cat.section_id)
+            .or_default()
+            .push(cat.item_id);
+    }
+
+    store::item::organize(&state.db, store_id, &update_map).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -130,12 +163,12 @@ async fn openai_organize(
     let prompt_data = serde_json::to_string(&prompt_data).expect("prompt should be valid json");
 
     let prompt = format!(
-        "You are a helpful store manager assistant. You are given a list of store sections and items. Your task is to organize the items into sections and return the mapping.\n\nEach item can be in at most one section. If an item doesn't belong in any of the sections, ignore it.\n\n{prompt_data}"
+        "You are a helpful store manager assistant. You are given a list of store sections and items. Section and items names are in slovene or english language. Your task is to organize the items into sections and return the mapping.\n\nEach item can be in at most one section. **IMPORTANT:** If an item doesn't belong in any of the sections, ignore it by not including it in the output.\n\n{prompt_data}"
     );
 
     let request = CreateResponseArgs::default()
         .model("gpt-5-mini")
-        .reasoning(ReasoningEffort::Minimal)
+        .reasoning(ReasoningEffort::Low)
         .text(ResponseFormatJsonSchema {
             description: Some("Mapping of items to sections".to_string()),
             name: "categorization".to_string(),

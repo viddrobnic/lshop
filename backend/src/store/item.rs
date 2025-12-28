@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+
 use serde::Serialize;
 use sqlx::prelude::{FromRow, Row};
-use sqlx::{Executor, Sqlite};
+use sqlx::{Executor, QueryBuilder, Sqlite};
 
 use crate::db::Db;
 
@@ -59,16 +61,68 @@ pub async fn list(db: &Db) -> Result<Vec<Item>, sqlx::Error> {
         .await
 }
 
-pub async fn unassigned_for_store(db: &Db, store_id: i64) -> Result<Vec<Item>, sqlx::Error> {
+pub async fn unassigned_for_store<'c, E: Executor<'c, Database = Sqlite>>(
+    db: E,
+    store_id: i64,
+) -> Result<Vec<Item>, sqlx::Error> {
     sqlx::query_as(
         "SELECT * FROM items 
          WHERE store_id = ? 
            AND section_id IS NULL 
-           AND checked = FALSE",
+           AND checked = FALSE
+         ORDER BY ord ASC",
     )
     .bind(store_id)
     .fetch_all(db)
     .await
+}
+
+pub async fn organize(
+    db: &Db,
+    store_id: i64,
+    update: &HashMap<i64, Vec<i64>>,
+) -> Result<(), sqlx::Error> {
+    let mut tx = db.begin().await?;
+
+    for (section_id, items) in update.iter() {
+        organize_section(&mut tx, store_id, *section_id, items).await?
+    }
+
+    tx.commit().await
+}
+
+async fn organize_section(
+    tx: &mut sqlx::SqliteTransaction<'_>,
+    store_id: i64,
+    section_id: i64,
+    items: &[i64],
+) -> Result<(), sqlx::Error> {
+    if items.is_empty() {
+        return Ok(());
+    }
+
+    let now = time::OffsetDateTime::now_utc();
+    let ord_start = max_ord(&mut **tx, Some(store_id), Some(section_id)).await?;
+
+    let mut qb = QueryBuilder::<Sqlite>::new("WITH updates(id, ord) AS (");
+
+    qb.push_values(items.iter().enumerate(), |mut b, (idx, id)| {
+        let ord = ord_start + (idx as i64) + 1;
+        b.push_bind(*id).push_bind(ord);
+    });
+
+    qb.push(") ")
+        .push(
+            "UPDATE items
+             SET ord = updates.ord, section_id = ",
+        )
+        .push_bind(section_id)
+        .push(", updated_at = ")
+        .push_bind(now)
+        .push("FROM updates WHERE items.id = updates.id");
+
+    qb.build().execute(&mut **tx).await?;
+    Ok(())
 }
 
 async fn max_ord<'c, E: Executor<'c, Database = Sqlite>>(
