@@ -43,7 +43,10 @@ The following endpoints have to be implemented
   }
   ```
 
-- [ ] update (rename, change section or store)
+- [ ] update (rename)
 - [ ] delete
 - [ ] move -> specify store id, section id and order index
-- [ ] organize -> run llm to organize through sections
+- [ ] check & uncheck with currect index update
+- [x] organize -> run llm to organize through sections
+- [ ] update ordering index when section or store is deleted and items are moved to unassigned
+- [ ] list archived (checked) -> only order by updated at desc
