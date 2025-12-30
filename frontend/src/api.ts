@@ -20,7 +20,8 @@ export async function apiFetch<T = unknown>(
   input: RequestInfo | URL,
   init?: RequestInit
 ): Promise<T> {
-  const response = await fetch(input, init);
+  const url = typeof input === "string" ? `/api${input}` : input;
+  const response = await fetch(url, init);
 
   if (!response.ok) {
     if (response.status === 401) {
