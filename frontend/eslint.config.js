@@ -26,6 +26,7 @@ export default [
     rules: {
       ...tseslint.configs.strict.rules,
       ...solid.rules,
+      "@typescript-eslint/no-non-null-assertion": "off",
     },
   },
   {
