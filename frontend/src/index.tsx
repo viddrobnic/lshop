@@ -8,6 +8,8 @@ import { Router, Route } from "@solidjs/router";
 
 import App from "./app";
 import Home from "./pages/home";
+import { AuthenticatedGuard, GuestGuard } from "./providers/auth";
+import Login from "./pages/login";
 
 const root = document.getElementById("root");
 
@@ -20,8 +22,14 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
 render(
   () => (
     <Router root={App}>
-      <Route path="/" component={Home} />
-      <Route path="/about" component={lazy(() => import("./pages/about"))} />
+      <Route component={GuestGuard}>
+        <Route path="/login" component={Login} />
+      </Route>
+
+      <Route component={AuthenticatedGuard}>
+        <Route path="/" component={Home} />
+      </Route>
+
       <Route path="*" component={lazy(() => import("./errors/404"))} />
     </Router>
   ),

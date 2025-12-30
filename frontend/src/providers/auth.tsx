@@ -3,7 +3,10 @@ import {
   useContext,
   type ParentComponent,
   type Accessor,
+  Show,
+  createEffect,
 } from "solid-js";
+import { useNavigate } from "@solidjs/router";
 import { useQuery } from "@tanstack/solid-query";
 import { apiFetch, UnauthorizedError } from "../api";
 
@@ -57,3 +60,29 @@ export function useAuth(): AuthContextValue {
   }
   return context;
 }
+
+export const AuthenticatedGuard: ParentComponent = (props) => {
+  const { user, isPending } = useAuth();
+  const navigate = useNavigate();
+
+  createEffect(() => {
+    if (!isPending() && !user()) {
+      navigate("/login");
+    }
+  });
+
+  return <Show when={!isPending() && !!user()}>{props.children}</Show>;
+};
+
+export const GuestGuard: ParentComponent = (props) => {
+  const { user, isPending } = useAuth();
+  const navigate = useNavigate();
+
+  createEffect(() => {
+    if (!isPending() && !!user()) {
+      navigate("/");
+    }
+  });
+
+  return <>{props.children}</>;
+};

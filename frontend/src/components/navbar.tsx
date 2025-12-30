@@ -3,7 +3,7 @@ import { useAuth } from "../providers/auth";
 
 export function Navbar() {
   const location = useLocation();
-  const user = useAuth();
+  const { user } = useAuth();
 
   return (
     <nav class="navbar bg-base-100 shadow">
@@ -33,7 +33,7 @@ export function Navbar() {
           </A>
         </li>
 
-        <li>User: {user.user()?.id ?? "None"}</li>
+        <li>User: {user()?.id ?? "None"}</li>
 
         <li class="ml-auto flex items-center space-x-1 text-sm">
           <span>URL:</span>
