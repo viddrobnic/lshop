@@ -1,19 +1,23 @@
 import { Suspense, type ParentComponent } from "solid-js";
 import { QueryProvider } from "./providers/query-client";
-import { AuthProvider } from "./providers/auth";
+import { AuthenticatedGuard, AuthProvider } from "./providers/auth";
 import { Navbar } from "./components/navbar";
 
-const App: ParentComponent = (props) => {
+export const App: ParentComponent = (props) => {
   return (
     <QueryProvider>
       <AuthProvider>
-        <Navbar />
-        <main>
-          <Suspense>{props.children}</Suspense>
-        </main>
+        <Suspense>{props.children}</Suspense>
       </AuthProvider>
     </QueryProvider>
   );
 };
 
-export default App;
+export const AuthenticatedApp: ParentComponent = (props) => {
+  return (
+    <AuthenticatedGuard>
+      <Navbar />
+      <Suspense>{props.children}</Suspense>
+    </AuthenticatedGuard>
+  );
+};

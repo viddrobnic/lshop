@@ -6,9 +6,9 @@ import { render } from "solid-js/web";
 import { lazy } from "solid-js";
 import { Router, Route } from "@solidjs/router";
 
-import App from "./app";
+import { App, AuthenticatedApp } from "./app";
 import Home from "./pages/home";
-import { AuthenticatedGuard, GuestGuard } from "./providers/auth";
+import { GuestGuard } from "./providers/auth";
 import Login from "./pages/login";
 
 const root = document.getElementById("root");
@@ -26,7 +26,7 @@ render(
         <Route path="/login" component={Login} />
       </Route>
 
-      <Route component={AuthenticatedGuard}>
+      <Route component={AuthenticatedApp}>
         <Route path="/" component={Home} />
       </Route>
 
