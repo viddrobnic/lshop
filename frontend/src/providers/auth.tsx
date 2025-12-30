@@ -62,16 +62,18 @@ export function useAuth(): AuthContextValue {
 }
 
 export const AuthenticatedGuard: ParentComponent = (props) => {
-  const { user, isPending } = useAuth();
+  const auth = useAuth();
   const navigate = useNavigate();
 
   createEffect(() => {
-    if (!isPending() && !user()) {
+    if (!auth.isPending() && !auth.user()) {
       navigate("/login");
     }
   });
 
-  return <Show when={!isPending() && !!user()}>{props.children}</Show>;
+  return (
+    <Show when={!auth.isPending() && !!auth.user()}>{props.children}</Show>
+  );
 };
 
 export const GuestGuard: ParentComponent = (props) => {

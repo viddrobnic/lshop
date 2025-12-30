@@ -27,7 +27,7 @@ export const QueryProvider: ParentComponent = (props) => {
     queryCache: new QueryCache({
       onError: (error) => {
         if (error instanceof UnauthorizedError) {
-          queryClient.clear();
+          queryClient.invalidateQueries({ type: "all" });
           if (location.pathname !== "/login") {
             navigate("/login");
           }
@@ -37,7 +37,7 @@ export const QueryProvider: ParentComponent = (props) => {
     mutationCache: new MutationCache({
       onError: (error) => {
         if (error instanceof UnauthorizedError) {
-          queryClient.clear();
+          queryClient.invalidateQueries({ type: "all" });
           if (location.pathname !== "/login") {
             navigate("/login");
           }
