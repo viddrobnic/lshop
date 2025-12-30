@@ -16,6 +16,7 @@
   "license": "MIT",
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",
+    "@tanstack/eslint-plugin-query": "^5.91.2",
     "@types/node": "^25.0.3",
     "@typescript-eslint/eslint-plugin": "^8.51.0",
     "@typescript-eslint/parser": "^8.51.0",
@@ -34,6 +35,8 @@
   },
   "dependencies": {
     "@solidjs/router": "^0.15.4",
+    "@tanstack/solid-query": "^5.90.18",
+    "@tanstack/solid-query-devtools": "^5.91.2",
     "solid-js": "^1.9.10"
   }
 }

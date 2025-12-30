@@ -3,9 +3,11 @@ import tseslint from "@typescript-eslint/eslint-plugin";
 import tsparser from "@typescript-eslint/parser";
 import solid from "eslint-plugin-solid/configs/typescript";
 import globals from "globals";
+import tanstackQuery from "@tanstack/eslint-plugin-query";
 
 export default [
   js.configs.recommended,
+  ...tanstackQuery.configs["flat/recommended"],
   {
     files: ["**/*.{ts,tsx}"],
     plugins: {
