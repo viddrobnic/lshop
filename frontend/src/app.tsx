@@ -17,7 +17,9 @@ export const AuthenticatedApp: ParentComponent = (props) => {
   return (
     <AuthenticatedGuard>
       <Navbar />
-      <Suspense>{props.children}</Suspense>
+      <main class="mx-auto w-full max-w-3xl pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+        <Suspense>{props.children}</Suspense>
+      </main>
     </AuthenticatedGuard>
   );
 };

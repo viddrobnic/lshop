@@ -21,7 +21,7 @@ export async function apiFetch<T = unknown>(
   init?: RequestInit
 ): Promise<T> {
   const url = typeof input === "string" ? `/api${input}` : input;
-  const response = await fetch(url, init);
+  const response = await fetch(url, { ...init, credentials: "include" });
 
   if (!response.ok) {
     if (response.status === 401) {
