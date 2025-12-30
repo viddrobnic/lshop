@@ -19,7 +19,7 @@ export class UnauthorizedError extends ApiError {
 export async function apiFetch<T = unknown>(
   input: RequestInfo | URL,
   init?: RequestInit
-): Promise<T> {
+): Promise<T | null> {
   const url = typeof input === "string" ? `/api${input}` : input;
   const response = await fetch(url, { ...init, credentials: "include" });
 
@@ -32,5 +32,9 @@ export async function apiFetch<T = unknown>(
     throw new ApiError(message, response.status, response);
   }
 
-  return response.json();
+  if (response.headers.get("content-type")?.startsWith("application/json")) {
+    return response.json();
+  } else {
+    return null;
+  }
 }
