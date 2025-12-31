@@ -2,10 +2,18 @@ import { Switch, Match, For, createSignal } from "solid-js";
 import { useQuery } from "@tanstack/solid-query";
 import { apiFetch } from "../api";
 import { Section, Store } from "../data/stores";
-import { CircleAlertIcon, InfoIcon } from "lucide-solid";
+import { CircleAlertIcon, InfoIcon, PencilIcon } from "lucide-solid";
 import AddStoreDialog from "../components/add-store";
+import EditStoreDialog from "../components/edit-store";
+import { createStore } from "solid-js/store";
 
 export default function Stores() {
+  const [editingStore, setEditingStore] = createStore({
+    id: 0,
+    name: "",
+    open: false,
+  });
+
   const data = useQuery(() => ({
     queryKey: ["stores"],
     queryFn: async () => apiFetch<Store[]>("/stores"),
@@ -17,6 +25,8 @@ export default function Stores() {
         <h1 class="text-primary text-3xl font-bold">Stores</h1>
         <AddStoreDialog />
       </div>
+
+      <EditStoreDialog store={editingStore} setStore={setEditingStore} />
 
       <Switch>
         <Match when={data.isPending}>
@@ -46,7 +56,18 @@ export default function Stores() {
               <div class="px-4 pt-4">
                 <div class="join join-vertical w-full rounded-lg shadow">
                   <For each={data.data!}>
-                    {(store) => <StoreItem store={store} />}
+                    {(store) => (
+                      <StoreItem
+                        store={store}
+                        onEdit={() => {
+                          setEditingStore({
+                            id: store.id,
+                            name: store.name,
+                            open: true,
+                          });
+                        }}
+                      />
+                    )}
                   </For>
                 </div>
               </div>
@@ -58,7 +79,7 @@ export default function Stores() {
   );
 }
 
-function StoreItem(props: { store: Store }) {
+function StoreItem(props: { store: Store; onEdit: () => void }) {
   const [open, setOpen] = createSignal(false);
 
   const sections = useQuery(() => ({
@@ -77,7 +98,18 @@ function StoreItem(props: { store: Store }) {
         setOpen((old) => !old);
       }}
     >
-      <summary class="collapse-title font-semibold">{props.store.name}</summary>
+      <summary class="collapse-title flex items-center justify-between font-semibold">
+        <span>{props.store.name}</span>
+        <button
+          class="btn btn-sm btn-ghost btn-square"
+          onClick={(e) => {
+            e.stopPropagation();
+            props.onEdit();
+          }}
+        >
+          <PencilIcon class="text-secondary size-4" />
+        </button>
+      </summary>
       <div class="collapse-content text-sm">
         <Switch fallback={<Loading />}>
           <Match when={sections.data?.length === 0}>
