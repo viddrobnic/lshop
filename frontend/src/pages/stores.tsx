@@ -1,8 +1,9 @@
-import { Switch, Match, For, createEffect, createSignal } from "solid-js";
+import { Switch, Match, For, createSignal } from "solid-js";
 import { useQuery } from "@tanstack/solid-query";
 import { apiFetch } from "../api";
 import { Section, Store } from "../data/stores";
 import { CircleAlertIcon, InfoIcon } from "lucide-solid";
+import AddStoreDialog from "../components/add-store";
 
 export default function Stores() {
   const data = useQuery(() => ({
@@ -12,9 +13,16 @@ export default function Stores() {
 
   return (
     <>
-      <h1 class="text-primary px-4 text-3xl font-bold">Stores</h1>
+      <div class="flex items-center justify-between px-4">
+        <h1 class="text-primary text-3xl font-bold">Stores</h1>
+        <AddStoreDialog />
+      </div>
 
-      <Switch fallback={<Loading />}>
+      <Switch>
+        <Match when={data.isPending}>
+          <Loading />
+        </Match>
+
         <Match when={data.isError}>
           <div class="px-4 pt-4">
             <div role="alert" class="alert alert-error alert-soft">
@@ -24,23 +32,26 @@ export default function Stores() {
           </div>
         </Match>
 
-        <Match when={data.data?.length === 0}>
-          <div class="px-4 pt-4">
-            <div role="alert" class="alert">
-              <InfoIcon class="size-5" />
-              <span>No data yet</span>
-            </div>
-          </div>
-        </Match>
-
-        <Match when={!!data.data}>
-          <div class="px-4 pt-4">
-            <div class="join join-vertical w-full rounded shadow">
-              <For each={data.data!}>
-                {(store) => <StoreItem store={store} />}
-              </For>
-            </div>
-          </div>
+        <Match when={data.isSuccess}>
+          <Switch>
+            <Match when={data.data!.length === 0}>
+              <div class="px-4 pt-4">
+                <div role="alert" class="alert">
+                  <InfoIcon class="size-5" />
+                  <span>No data yet</span>
+                </div>
+              </div>
+            </Match>
+            <Match when={data.data!.length > 0}>
+              <div class="px-4 pt-4">
+                <div class="join join-vertical w-full rounded-lg shadow">
+                  <For each={data.data!}>
+                    {(store) => <StoreItem store={store} />}
+                  </For>
+                </div>
+              </div>
+            </Match>
+          </Switch>
         </Match>
       </Switch>
     </>
