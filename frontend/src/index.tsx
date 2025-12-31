@@ -11,6 +11,7 @@ import { App, AuthenticatedApp } from "./app";
 import Home from "./pages/home";
 import { GuestGuard } from "./providers/auth";
 import Login from "./pages/login";
+import Stores from "./pages/stores";
 
 const root = document.getElementById("root");
 
@@ -29,6 +30,7 @@ render(
 
       <Route component={AuthenticatedApp}>
         <Route path="/" component={Home} />
+        <Route path="/stores" component={Stores} />
       </Route>
 
       <Route path="*" component={lazy(() => import("./errors/404"))} />

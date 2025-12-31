@@ -18,8 +18,8 @@ export default function Home() {
   });
 
   return (
-    <div class="py-6">
-      <div class="text-primary px-4 text-3xl font-bold">Items</div>
+    <>
+      <h1 class="text-primary px-4 text-3xl font-bold">Items</h1>
       <Show when={total() !== undefined}>
         <div class="px-4 text-sm">{total()} total items</div>
       </Show>
@@ -31,9 +31,11 @@ export default function Home() {
             Loading...
           </div>
         </Match>
+
         <Match when={data.isError}>
           <div class="px-4 pt-4">Error: {data.error?.message}</div>
         </Match>
+
         <Match when={!!data.data}>
           <div class="pt-4">
             <Show when={data.data!.unassigned.length > 0}>
@@ -61,7 +63,7 @@ export default function Home() {
           </div>
         </Match>
       </Switch>
-    </div>
+    </>
   );
 }
 

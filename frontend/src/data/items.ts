@@ -1,10 +1,4 @@
-export type Section = {
-  id: number;
-  store_id: number;
-  name: string;
-  created_at: string;
-  updated_at: string;
-};
+import { Section, Store } from "./stores";
 
 export type Item = {
   id: number;
@@ -12,13 +6,6 @@ export type Item = {
   section_id?: number;
   name: string;
   checked: boolean;
-  created_at: string;
-  updated_at: string;
-};
-
-export type Store = {
-  id: number;
-  name: string;
   created_at: string;
   updated_at: string;
 };

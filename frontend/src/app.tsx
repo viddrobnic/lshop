@@ -17,7 +17,7 @@ export const AuthenticatedApp: ParentComponent = (props) => {
   return (
     <AuthenticatedGuard>
       <Navigation />
-      <main class="mx-auto w-full max-w-3xl pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+      <main class="mx-auto w-full max-w-3xl py-6 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
         <Suspense>{props.children}</Suspense>
       </main>
     </AuthenticatedGuard>
