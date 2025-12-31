@@ -1,4 +1,4 @@
-import { Switch, Match, createSignal, Show, For } from "solid-js";
+import { Switch, Match, createSignal, Show, For, createMemo } from "solid-js";
 import { Section, Store } from "../../data/stores";
 import {
   useMutation,
@@ -16,6 +16,15 @@ import {
   TrashIcon,
 } from "lucide-solid";
 import Loading from "./loading";
+import {
+  DragDropProvider,
+  DragDropSensors,
+  DragOverlay,
+  SortableProvider,
+  createSortable,
+  closestCenter,
+  useDragDropContext,
+} from "@thisbeyond/solid-dnd";
 
 export default function StoreItem(props: {
   store: Store;
@@ -95,20 +104,11 @@ export default function StoreItem(props: {
               </div>
             </Show>
 
-            <For each={sections.data}>
-              {(section) => (
-                <>
-                  <SectionItem section={section} />
-                  <div class="divider my-2 h-0" />
-                </>
-              )}
-            </For>
+            <SectionList sections={sections.data!} />
 
             <Show when={optimisticSection().at(0) !== undefined}>
-              <div class="px-2 text-sm opacity-50">
-                {optimisticSection()[0]}
-              </div>
-              <div class="divider my-2 h-0" />
+              <div class="p-2 text-sm opacity-50">{optimisticSection()[0]}</div>
+              <div class="divider my-0 h-0" />
             </Show>
 
             <CreateSectionForm storeId={props.store.id} />
@@ -119,8 +119,85 @@ export default function StoreItem(props: {
   );
 }
 
+function SectionList(props: { sections: Section[] }) {
+  const [activeItem, setActiveItem] = createSignal<Section | null>(null);
+  const ids = createMemo(() => props.sections.map((sec) => sec.id));
+
+  const onDragStart = ({
+    draggable,
+  }: {
+    draggable: { id: string | number };
+  }) => {
+    const section = props.sections.find((s) => s.id === draggable.id);
+    setActiveItem(section ?? null);
+  };
+
+  const onDragEnd = ({
+    draggable,
+    droppable,
+  }: {
+    draggable?: { id: string | number } | null;
+    droppable?: { id: string | number } | null;
+  }) => {
+    if (draggable && droppable) {
+      const currentIds = ids();
+      const fromIndex = currentIds.indexOf(draggable.id as number);
+      const toIndex = currentIds.indexOf(droppable.id as number);
+      if (fromIndex >= 0 && toIndex >= 0 && fromIndex !== toIndex) {
+        console.log("from:", fromIndex, "to:", toIndex);
+      }
+    }
+    setActiveItem(null);
+  };
+
+  return (
+    <DragDropProvider
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      collisionDetector={closestCenter}
+    >
+      <DragDropSensors />
+      <SortableProvider ids={ids()}>
+        <For each={props.sections}>
+          {(section) => (
+            <>
+              <SectionItem section={section} />
+              <div class="divider my-0 h-0" />
+            </>
+          )}
+        </For>
+      </SortableProvider>
+      <DragOverlay>
+        <Show when={activeItem()}>
+          <div class="px-2 text-sm">{activeItem()!.name}</div>
+        </Show>
+      </DragOverlay>
+    </DragDropProvider>
+  );
+}
+
 function SectionItem(props: { section: Section }) {
-  return <div class="px-2 text-sm">{props.section.name}</div>;
+  const sortable = createMemo(() => createSortable(props.section.id));
+  const [state] = useDragDropContext()!;
+
+  return (
+    <div
+      ref={sortable().ref}
+      {...sortable().dragActivators}
+      class="cursor-grab p-2 text-sm"
+      classList={{
+        "opacity-50": sortable().isActiveDraggable,
+        "transition-transform": !!state.active.draggable,
+      }}
+      style={{
+        transform: sortable().transform
+          ? `translate3d(${sortable().transform.x}px, ${sortable().transform.y}px, 0)`
+          : undefined,
+      }}
+    >
+      {props.section.name}
+    </div>
+  );
 }
 
 function CreateSectionForm(props: { storeId: number }) {
