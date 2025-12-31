@@ -2,13 +2,20 @@ import { Switch, Match, For, createSignal } from "solid-js";
 import { useQuery } from "@tanstack/solid-query";
 import { apiFetch } from "../api";
 import { Section, Store } from "../data/stores";
-import { CircleAlertIcon, InfoIcon, PencilIcon } from "lucide-solid";
-import AddStoreDialog from "../components/add-store";
-import EditStoreDialog from "../components/edit-store";
+import { CircleAlertIcon, InfoIcon, PencilIcon, TrashIcon } from "lucide-solid";
+import AddStoreDialog from "../components/store/add-store";
+import EditStoreDialog from "../components/store/edit-store";
+import DeleteStoreDialog from "../components/store/delete-store";
 import { createStore } from "solid-js/store";
 
 export default function Stores() {
   const [editingStore, setEditingStore] = createStore({
+    id: 0,
+    name: "",
+    open: false,
+  });
+
+  const [deletingStore, setDeletingStore] = createStore({
     id: 0,
     name: "",
     open: false,
@@ -27,6 +34,7 @@ export default function Stores() {
       </div>
 
       <EditStoreDialog store={editingStore} setStore={setEditingStore} />
+      <DeleteStoreDialog store={deletingStore} setStore={setDeletingStore} />
 
       <Switch>
         <Match when={data.isPending}>
@@ -66,6 +74,13 @@ export default function Stores() {
                             open: true,
                           });
                         }}
+                        onDelete={() => {
+                          setDeletingStore({
+                            id: store.id,
+                            name: store.name,
+                            open: true,
+                          });
+                        }}
                       />
                     )}
                   </For>
@@ -79,7 +94,11 @@ export default function Stores() {
   );
 }
 
-function StoreItem(props: { store: Store; onEdit: () => void }) {
+function StoreItem(props: {
+  store: Store;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   const [open, setOpen] = createSignal(false);
 
   const sections = useQuery(() => ({
@@ -100,15 +119,26 @@ function StoreItem(props: { store: Store; onEdit: () => void }) {
     >
       <summary class="collapse-title flex items-center justify-between font-semibold">
         <span>{props.store.name}</span>
-        <button
-          class="btn btn-sm btn-ghost btn-square"
-          onClick={(e) => {
-            e.stopPropagation();
-            props.onEdit();
-          }}
-        >
-          <PencilIcon class="text-secondary size-4" />
-        </button>
+        <div class="flex gap-1">
+          <button
+            class="btn btn-sm btn-ghost btn-circle"
+            onClick={(e) => {
+              e.stopPropagation();
+              props.onEdit();
+            }}
+          >
+            <PencilIcon class="size-4" />
+          </button>
+          <button
+            class="btn btn-sm btn-ghost btn-circle text-error"
+            onClick={(e) => {
+              e.stopPropagation();
+              props.onDelete();
+            }}
+          >
+            <TrashIcon class="size-4" />
+          </button>
+        </div>
       </summary>
       <div class="collapse-content text-sm">
         <Switch fallback={<Loading />}>

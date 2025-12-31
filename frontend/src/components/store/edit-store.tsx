@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/solid-query";
 import { createEffect, Show } from "solid-js";
 import { Portal } from "solid-js/web";
-import { apiFetch } from "../api";
+import { apiFetch } from "../../api";
 import { SetStoreFunction } from "solid-js/store";
 
 type EditData = {

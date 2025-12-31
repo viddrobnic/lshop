@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/solid-query";
 import { createEffect, createSignal, Show } from "solid-js";
 import { Portal } from "solid-js/web";
-import { apiFetch } from "../api";
+import { apiFetch } from "../../api";
 import { PlusIcon } from "lucide-solid";
 
 export default function AddStoreDialog() {
