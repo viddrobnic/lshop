@@ -1,5 +1,6 @@
 /* @refresh reload */
 import "solid-devtools";
+import "@fontsource-variable/inter";
 import "./index.css";
 
 import { render } from "solid-js/web";
@@ -33,6 +34,5 @@ render(
       <Route path="*" component={lazy(() => import("./errors/404"))} />
     </Router>
   ),
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   root!
 );
