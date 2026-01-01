@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query";
 import { apiFetch } from "../../api";
 import {
   CircleAlertIcon,
-  EllipsisVerticalIcon,
+  CircleEllipsisIcon,
   GripVerticalIcon,
   InfoIcon,
   PackageIcon,
@@ -14,6 +14,9 @@ import {
 } from "lucide-solid";
 import Loading from "./loading";
 import AddSectionDialog from "./add-section";
+import EditSectionDialog from "./edit-section";
+import DeleteSectionDialog from "./delete-section";
+
 import {
   DragDropProvider,
   DragDropSensors,
@@ -42,7 +45,7 @@ export default function StoreItem(props: {
   return (
     <div class="relative">
       <details
-        class="bg-base-100 border-base-200 join-item collapse-arrow collapse border"
+        class="bg-base-100 border-base-200 join-item collapse-arrow collapse border overflow-visible"
         open={open()}
         onToggle={() => setOpen((old) => !old)}
       >
@@ -56,7 +59,7 @@ export default function StoreItem(props: {
             </span>
           </div>
         </summary>
-        <div class="collapse-content px-2">
+        <div class="collapse-content overflow-visible px-2">
           <Switch>
             <Match when={sections.isPending}>
               <Loading />
@@ -95,7 +98,7 @@ export default function StoreItem(props: {
             role="button"
             class="btn btn-sm btn-ghost btn-circle"
           >
-            <EllipsisVerticalIcon class="size-4" />
+            <CircleEllipsisIcon class="size-4" />
           </div>
           <ul
             tabindex="-1"
@@ -123,6 +126,10 @@ export default function StoreItem(props: {
 function SectionList(props: { storeId: number; sections: Section[] }) {
   const [activeItem, setActiveItem] = createSignal<Section | null>(null);
   const ids = createMemo(() => props.sections.map((sec) => sec.id));
+
+  // Single edit/delete dialog state for all sections
+  const [editSection, setEditSection] = createSignal<Section | null>(null);
+  const [deleteSection, setDeleteSection] = createSignal<Section | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -203,44 +210,69 @@ function SectionList(props: { storeId: number; sections: Section[] }) {
   }));
 
   return (
-    <DragDropProvider
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
-      collisionDetector={closestCenter}
-    >
-      <DragDropSensors />
-      <SortableProvider ids={ids()}>
-        <For each={props.sections}>
-          {(section, idx) => (
-            <>
-              <SectionItem
-                section={section}
-                disabled={reorderMutation.isPending}
-              />
-              <Show when={idx() < props.sections.length - 1}>
-                <div class="divider my-0 h-0" />
-              </Show>
-            </>
-          )}
-        </For>
-      </SortableProvider>
-      <DragOverlay>
-        <Show when={activeItem()}>
-          <SectionListItem name={activeItem()!.name} isDragging />
-        </Show>
-      </DragOverlay>
-    </DragDropProvider>
+    <>
+      <DragDropProvider
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        collisionDetector={closestCenter}
+      >
+        <DragDropSensors />
+        <SortableProvider ids={ids()}>
+          <For each={props.sections}>
+            {(section, idx) => (
+              <>
+                <SectionItem
+                  section={section}
+                  disabled={reorderMutation.isPending}
+                  onEdit={() => setEditSection(section)}
+                  onDelete={() => setDeleteSection(section)}
+                />
+                <Show when={idx() < props.sections.length - 1}>
+                  <div class="divider my-0 h-0" />
+                </Show>
+              </>
+            )}
+          </For>
+        </SortableProvider>
+        <DragOverlay>
+          <Show when={activeItem()}>
+            <SectionListItem name={activeItem()!.name} isDragging />
+          </Show>
+        </DragOverlay>
+      </DragDropProvider>
+      <EditSectionDialog
+        id={() => editSection()?.id ?? 0}
+        storeId={() => props.storeId}
+        name={() => editSection()?.name ?? ""}
+        open={() => editSection() !== null}
+        setOpen={(open) => !open && setEditSection(null)}
+      />
+      <DeleteSectionDialog
+        id={() => deleteSection()?.id ?? 0}
+        storeId={() => props.storeId}
+        name={() => deleteSection()?.name ?? ""}
+        open={() => deleteSection() !== null}
+        setOpen={(open) => !open && setDeleteSection(null)}
+      />
+    </>
   );
 }
 
 function SectionListItem(props: {
   name: string;
   isDragging?: boolean;
+  isAnyDragging?: boolean;
   ref?: (el: HTMLDivElement) => void;
   dragActivators?: Record<string, unknown>;
   transform?: { x: number; y: number };
   class?: string;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }) {
+  // Only apply transform when something is actively being dragged
+  // This prevents the transform from breaking dropdown positioning when idle
+  const shouldTransform = () => props.isAnyDragging && props.transform;
+
   return (
     <div
       ref={props.ref}
@@ -251,8 +283,8 @@ function SectionListItem(props: {
         props.class
       )}
       style={{
-        transform: props.transform
-          ? `translate3d(${props.transform.x}px, ${props.transform.y}px, 0)`
+        transform: shouldTransform()
+          ? `translate3d(${props.transform!.x}px, ${props.transform!.y}px, 0)`
           : undefined,
       }}
     >
@@ -261,18 +293,51 @@ function SectionListItem(props: {
       </div>
       <span class="text-base font-medium">{props.name}</span>
       <Show when={!props.isDragging}>
-        <div
-          {...(props.dragActivators || {})}
-          class="ml-auto flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded text-neutral-500 select-none"
-        >
-          <GripVerticalIcon class="size-4" />
+        <div class="ml-auto flex items-center gap-1">
+          <div class="dropdown dropdown-end">
+            <div
+              tabindex="0"
+              role="button"
+              class="btn btn-sm btn-ghost btn-circle"
+            >
+              <CircleEllipsisIcon class="size-4" />
+            </div>
+            <ul
+              tabindex="-1"
+              class="dropdown-content menu bg-base-200 rounded-box z-1 w-52 p-2 shadow-md"
+            >
+              <li>
+                <a onClick={() => props.onEdit?.()}>
+                  <PencilIcon class="size-4" />
+                  Rename
+                </a>
+              </li>
+              <li>
+                <a onClick={() => props.onDelete?.()}>
+                  <TrashIcon class="size-4" />
+                  Delete
+                </a>
+              </li>
+            </ul>
+          </div>
+          <div
+            {...(props.dragActivators || {})}
+            class="flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded text-neutral-500 select-none"
+          >
+            <GripVerticalIcon class="size-4" />
+          </div>
         </div>
       </Show>
     </div>
   );
 }
 
-function SectionItem(props: { section: Section; disabled?: boolean }) {
+function SectionItem(props: {
+  section: Section;
+  disabled?: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   const sortable = createMemo(() => createSortable(props.section.id));
   const [state] = useDragDropContext()!;
 
@@ -282,10 +347,13 @@ function SectionItem(props: { section: Section; disabled?: boolean }) {
       ref={sortable().ref}
       dragActivators={props.disabled ? {} : sortable().dragActivators}
       transform={sortable().transform}
+      isAnyDragging={!!state.active.draggable}
       class={cn(
         (sortable().isActiveDraggable || props.disabled) && "opacity-60",
         state.active.draggable && "transition-transform"
       )}
+      onEdit={props.onEdit}
+      onDelete={props.onDelete}
     />
   );
 }
