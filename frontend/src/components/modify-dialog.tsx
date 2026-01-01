@@ -25,6 +25,8 @@ export default function ModifyDialog(props: ModifyDialogProps) {
         inputRef.value = props.currentName;
       }
       dialogRef.showModal();
+      // Manually focus input for Safari compatibility
+      inputRef.focus();
     } else {
       dialogRef.close();
     }
