@@ -104,7 +104,7 @@ export default function StoreItem(props: {
               </div>
             </Show>
 
-            <SectionList sections={sections.data!} />
+            <SectionList storeId={props.store.id} sections={sections.data!} />
 
             <Show when={optimisticSection().at(0) !== undefined}>
               <div class="p-2 text-sm opacity-50">{optimisticSection()[0]}</div>
@@ -119,9 +119,11 @@ export default function StoreItem(props: {
   );
 }
 
-function SectionList(props: { sections: Section[] }) {
+function SectionList(props: { storeId: number; sections: Section[] }) {
   const [activeItem, setActiveItem] = createSignal<Section | null>(null);
   const ids = createMemo(() => props.sections.map((sec) => sec.id));
+
+  const queryClient = useQueryClient();
 
   const onDragStart = ({
     draggable,
@@ -144,11 +146,60 @@ function SectionList(props: { sections: Section[] }) {
       const fromIndex = currentIds.indexOf(draggable.id as number);
       const toIndex = currentIds.indexOf(droppable.id as number);
       if (fromIndex >= 0 && toIndex >= 0 && fromIndex !== toIndex) {
-        console.log("from:", fromIndex, "to:", toIndex);
+        const newSections = props.sections.slice();
+        newSections.splice(toIndex, 0, ...newSections.splice(fromIndex, 1));
+        reorderMutation.mutate(newSections);
       }
     }
     setActiveItem(null);
   };
+
+  const reorderMutation = useMutation(() => ({
+    mutationFn: async (sections: Section[]) => {
+      const ids = sections.map((sec) => sec.id);
+      await apiFetch(`/stores/${props.storeId}/sections/reorder`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+    },
+    onMutate: async (sections, context) => {
+      // Cancel any outgoing refetches
+      // (so they don't overwrite our optimistic update)
+      await context.client.cancelQueries({
+        queryKey: ["stores", "sections", props.storeId],
+      });
+
+      // Snapshot the previous value
+      const previousSections = context.client.getQueryData([
+        "stores",
+        "sections",
+        props.storeId,
+      ]) as Section[];
+
+      // Optimistically update to the new value
+      context.client.setQueryData(
+        ["stores", "sections", props.storeId],
+        sections
+      );
+
+      // Return a result with the snapshotted value
+      return { previousSections };
+    },
+    onError: (_err, _sections, onMutateResult, context) => {
+      // If the mutation fails,
+      // use the result returned from onMutate to roll back
+      context.client.setQueryData(
+        ["stores", "sections", props.storeId],
+        onMutateResult?.previousSections
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["stores", "sections", props.storeId],
+      });
+    },
+  }));
 
   return (
     <DragDropProvider
@@ -161,7 +212,10 @@ function SectionList(props: { sections: Section[] }) {
         <For each={props.sections}>
           {(section) => (
             <>
-              <SectionItem section={section} />
+              <SectionItem
+                section={section}
+                disabled={reorderMutation.isPending}
+              />
               <div class="divider my-0 h-0" />
             </>
           )}
@@ -176,17 +230,18 @@ function SectionList(props: { sections: Section[] }) {
   );
 }
 
-function SectionItem(props: { section: Section }) {
+function SectionItem(props: { section: Section; disabled?: boolean }) {
   const sortable = createMemo(() => createSortable(props.section.id));
   const [state] = useDragDropContext()!;
 
   return (
     <div
       ref={sortable().ref}
-      {...sortable().dragActivators}
-      class="cursor-grab p-2 text-sm"
+      {...(props.disabled ? {} : sortable().dragActivators)}
+      class="p-2 text-sm"
       classList={{
-        "opacity-50": sortable().isActiveDraggable,
+        "cursor-grab": !props.disabled,
+        "opacity-50": sortable().isActiveDraggable || props.disabled === true,
         "transition-transform": !!state.active.draggable,
       }}
       style={{
