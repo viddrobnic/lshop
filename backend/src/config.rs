@@ -13,6 +13,10 @@ impl Environment {
     pub fn is_dev(&self) -> bool {
         *self == Environment::Dev
     }
+
+    pub fn is_prod(&self) -> bool {
+        *self == Environment::Prod
+    }
 }
 
 #[derive(Debug, Deserialize)]

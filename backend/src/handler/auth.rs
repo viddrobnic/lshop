@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::auth::User;
+use crate::state::AppState;
 use crate::util::to_hex;
 use crate::{db::Db, handler::Problem, store};
 
@@ -54,12 +55,12 @@ impl IntoResponse for LoginError {
 }
 
 pub async fn login(
-    State(db): State<Db>,
+    State(state): State<AppState>,
     jar: CookieJar,
     Json(credentials): Json<Credentials>,
 ) -> Result<(CookieJar, Json<Session>), LoginError> {
     // Get user from db
-    let user_res = store::user::get_user(&db, &credentials.username).await;
+    let user_res = store::user::get_user(&state.db, &credentials.username).await;
     let user = match user_res {
         Ok(Some(u)) => u,
         Ok(None) => return Err(LoginError::InvalidCredentials),
@@ -82,7 +83,7 @@ pub async fn login(
     }
 
     // Create new session
-    let session = create_session(&db, user.id).await.map_err(|err| {
+    let session = create_session(&state.db, user.id).await.map_err(|err| {
         tracing::error!(
             error = err.to_string(),
             "database error during session generation: {err}"
@@ -93,7 +94,8 @@ pub async fn login(
     // Set new cookie
     let cookie = Cookie::build(("session", session.session.clone()))
         .path("/api")
-        .secure(true)
+        // Safari doesn't save secure cookies on localhost...
+        .secure(state.config.environment.is_prod())
         .http_only(true)
         .same_site(SameSite::Lax);
 
