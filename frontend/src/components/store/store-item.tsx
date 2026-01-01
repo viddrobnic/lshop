@@ -11,8 +11,11 @@ import {
   CheckIcon,
   CircleAlertIcon,
   CirclePlusIcon,
+  GripVerticalIcon,
   InfoIcon,
+  PackageIcon,
   PencilIcon,
+  StoreIcon,
   TrashIcon,
 } from "lucide-solid";
 import Loading from "./loading";
@@ -25,6 +28,7 @@ import {
   closestCenter,
   useDragDropContext,
 } from "@thisbeyond/solid-dnd";
+import { cn } from "../../lib/utils";
 
 export default function StoreItem(props: {
   store: Store;
@@ -55,8 +59,15 @@ export default function StoreItem(props: {
       open={open()}
       onToggle={() => setOpen((old) => !old)}
     >
-      <summary class="collapse-title flex items-center justify-between font-semibold">
-        <span>{props.store.name}</span>
+      <summary class="collapse-title flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="bg-secondary/10 text-secondary flex size-7 shrink-0 items-center justify-center rounded-md">
+            <StoreIcon class="size-4" />
+          </div>
+          <span class="text-lg font-bold tracking-tight">
+            {props.store.name}
+          </span>
+        </div>
         <div class="flex gap-1">
           <button
             class="btn btn-sm btn-ghost btn-circle"
@@ -107,8 +118,8 @@ export default function StoreItem(props: {
             <SectionList storeId={props.store.id} sections={sections.data!} />
 
             <Show when={optimisticSection().at(0) !== undefined}>
-              <div class="p-2 text-sm opacity-50">{optimisticSection()[0]}</div>
               <div class="divider my-0 h-0" />
+              <SectionListItem name={optimisticSection()[0]} isOptimistic />
             </Show>
 
             <CreateSectionForm storeId={props.store.id} />
@@ -156,6 +167,7 @@ function SectionList(props: { storeId: number; sections: Section[] }) {
 
   const reorderMutation = useMutation(() => ({
     mutationFn: async (sections: Section[]) => {
+      await new Promise((r) => setTimeout(r, 2000));
       const ids = sections.map((sec) => sec.id);
       await apiFetch(`/stores/${props.storeId}/sections/reorder`, {
         method: "PUT",
@@ -210,23 +222,68 @@ function SectionList(props: { storeId: number; sections: Section[] }) {
       <DragDropSensors />
       <SortableProvider ids={ids()}>
         <For each={props.sections}>
-          {(section) => (
+          {(section, idx) => (
             <>
               <SectionItem
                 section={section}
                 disabled={reorderMutation.isPending}
               />
-              <div class="divider my-0 h-0" />
+              <Show when={idx() < props.sections.length - 1}>
+                <div class="divider my-0 h-0" />
+              </Show>
             </>
           )}
         </For>
       </SortableProvider>
       <DragOverlay>
         <Show when={activeItem()}>
-          <div class="px-2 text-sm">{activeItem()!.name}</div>
+          <SectionListItem name={activeItem()!.name} isDragging />
         </Show>
       </DragOverlay>
     </DragDropProvider>
+  );
+}
+
+function SectionListItem(props: {
+  name: string;
+  isOptimistic?: boolean;
+  isDragging?: boolean;
+  ref?: (el: HTMLDivElement) => void;
+  dragActivators?: Record<string, unknown>;
+  transform?: { x: number; y: number };
+  class?: string;
+}) {
+  return (
+    <div
+      ref={props.ref}
+      {...(props.dragActivators || {})}
+      class={cn(
+        "group flex items-center gap-3 rounded-lg px-3 py-3 transition-colors",
+        !props.isOptimistic && !props.isDragging && "hover:bg-base-200/50",
+        props.isOptimistic && "opacity-60",
+        props.isDragging && "bg-base-100 ring-primary/40 shadow-lg ring-1",
+        props.class
+      )}
+      style={{
+        transform: props.transform
+          ? `translate3d(${props.transform.x}px, ${props.transform.y}px, 0)`
+          : undefined,
+      }}
+    >
+      <div class="bg-primary/10 text-primary flex size-7 shrink-0 items-center justify-center rounded-md">
+        {props.isOptimistic ? (
+          <span class="loading loading-spinner size-4" />
+        ) : (
+          <PackageIcon class="size-4" />
+        )}
+      </div>
+      <span class="text-base font-medium">{props.name}</span>
+      <Show when={!props.isOptimistic && !props.isDragging}>
+        <div class="ml-auto opacity-0 transition-opacity group-hover:opacity-50">
+          <GripVerticalIcon class="size-4" />
+        </div>
+      </Show>
+    </div>
   );
 }
 
@@ -235,23 +292,17 @@ function SectionItem(props: { section: Section; disabled?: boolean }) {
   const [state] = useDragDropContext()!;
 
   return (
-    <div
+    <SectionListItem
+      name={props.section.name}
       ref={sortable().ref}
-      {...(props.disabled ? {} : sortable().dragActivators)}
-      class="p-2 text-sm"
-      classList={{
-        "cursor-grab": !props.disabled,
-        "opacity-50": sortable().isActiveDraggable || props.disabled === true,
-        "transition-transform": !!state.active.draggable,
-      }}
-      style={{
-        transform: sortable().transform
-          ? `translate3d(${sortable().transform.x}px, ${sortable().transform.y}px, 0)`
-          : undefined,
-      }}
-    >
-      {props.section.name}
-    </div>
+      dragActivators={props.disabled ? {} : sortable().dragActivators}
+      transform={sortable().transform}
+      class={cn(
+        !props.disabled && "cursor-grab",
+        (sortable().isActiveDraggable || props.disabled) && "opacity-60",
+        state.active.draggable && "transition-transform"
+      )}
+    />
   );
 }
 
@@ -262,12 +313,14 @@ function CreateSectionForm(props: { storeId: number }) {
 
   const createSectionMutation = useMutation(() => ({
     mutationKey: ["addSection", props.storeId],
-    mutationFn: async (name: string) =>
-      apiFetch(`/stores/${props.storeId}/sections`, {
+    mutationFn: async (name: string) => {
+      await new Promise((r) => setTimeout(r, 2000));
+      await apiFetch(`/stores/${props.storeId}/sections`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
-      }),
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["stores", "sections", props.storeId],
@@ -285,36 +338,38 @@ function CreateSectionForm(props: { storeId: number }) {
   };
 
   return (
-    <>
+    <div class="mt-4 px-1">
       <form
-        class="mt-4 flex items-center gap-x-2 px-2"
+        class="group border-base-300 bg-base-200/30 hover:border-primary/40 hover:bg-base-200/50 focus-within:border-primary focus-within:bg-base-100 relative flex items-center gap-3 rounded-lg border-2 border-dashed p-3 transition-all duration-200 focus-within:shadow-sm"
         onSubmit={handleSubmit}
         ref={formRef}
       >
-        <CirclePlusIcon class="text-primary size-5" />
+        <div class="bg-base-200 group-focus-within:bg-primary/10 group-focus-within:text-primary flex size-7 shrink-0 items-center justify-center rounded-md text-neutral-500 transition-colors">
+          <CirclePlusIcon class="size-4" />
+        </div>
         <input
           name="name"
           type="text"
-          placeholder="Add Section"
-          class="input input-ghost input-sm w-full"
+          placeholder="Add a new section..."
+          class="flex-1 bg-transparent font-medium placeholder:text-neutral-400 focus:outline-none"
           required
           disabled={createSectionMutation.isPending}
         />
         <button
-          class="btn btn-sm text-primary btn-ghost btn-circle"
+          class="btn btn-sm btn-primary btn-circle opacity-0 transition-opacity group-focus-within:opacity-100"
           type="submit"
           disabled={createSectionMutation.isPending}
         >
           <Switch>
             <Match when={!createSectionMutation.isPending}>
-              <CheckIcon />
+              <CheckIcon class="size-4" />
             </Match>
             <Match when={createSectionMutation.isPending}>
-              <span class="loading loading-spinner text-neutral size-4" />
+              <span class="loading loading-spinner size-4" />
             </Match>
           </Switch>
         </button>
       </form>
-    </>
+    </div>
   );
 }
