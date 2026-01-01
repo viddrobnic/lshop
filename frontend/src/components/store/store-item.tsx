@@ -45,7 +45,7 @@ export default function StoreItem(props: {
   return (
     <div class="relative">
       <details
-        class="bg-base-100 border-base-200 join-item collapse-arrow collapse border overflow-visible"
+        class="bg-base-100 border-base-200 join-item collapse-arrow collapse overflow-visible border"
         open={open()}
         onToggle={() => setOpen((old) => !old)}
       >
@@ -292,42 +292,40 @@ function SectionListItem(props: {
         <PackageIcon class="size-4" />
       </div>
       <span class="text-base font-medium">{props.name}</span>
-      <Show when={!props.isDragging}>
-        <div class="ml-auto flex items-center gap-1">
-          <div class="dropdown dropdown-end">
-            <div
-              tabindex="0"
-              role="button"
-              class="btn btn-sm btn-ghost btn-circle"
-            >
-              <CircleEllipsisIcon class="size-4" />
-            </div>
-            <ul
-              tabindex="-1"
-              class="dropdown-content menu bg-base-200 rounded-box z-1 w-52 p-2 shadow-md"
-            >
-              <li>
-                <a onClick={() => props.onEdit?.()}>
-                  <PencilIcon class="size-4" />
-                  Rename
-                </a>
-              </li>
-              <li>
-                <a onClick={() => props.onDelete?.()}>
-                  <TrashIcon class="size-4" />
-                  Delete
-                </a>
-              </li>
-            </ul>
-          </div>
+      <div class="ml-auto flex items-center gap-1">
+        <div class="dropdown dropdown-end">
           <div
-            {...(props.dragActivators || {})}
-            class="flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded text-neutral-500 select-none"
+            tabindex="0"
+            role="button"
+            class="btn btn-sm btn-ghost btn-circle"
           >
-            <GripVerticalIcon class="size-4" />
+            <CircleEllipsisIcon class="size-4" />
           </div>
+          <ul
+            tabindex="-1"
+            class="dropdown-content menu bg-base-200 rounded-box z-1 w-52 p-2 shadow-md"
+          >
+            <li>
+              <a onClick={() => props.onEdit?.()}>
+                <PencilIcon class="size-4" />
+                Rename
+              </a>
+            </li>
+            <li>
+              <a onClick={() => props.onDelete?.()}>
+                <TrashIcon class="size-4" />
+                Delete
+              </a>
+            </li>
+          </ul>
         </div>
-      </Show>
+        <div
+          {...(props.dragActivators || {})}
+          class="flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded text-neutral-500 select-none"
+        >
+          <GripVerticalIcon class="size-4" />
+        </div>
+      </div>
     </div>
   );
 }
