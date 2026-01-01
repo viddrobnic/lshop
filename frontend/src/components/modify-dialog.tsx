@@ -25,6 +25,10 @@ export default function ModifyDialog(props: ModifyDialogProps) {
         inputRef.value = props.currentName;
       }
       dialogRef.showModal();
+
+      requestAnimationFrame(() => {
+        inputRef.focus({ preventScroll: true });
+      });
     } else {
       dialogRef.close();
     }
@@ -66,7 +70,6 @@ export default function ModifyDialog(props: ModifyDialogProps) {
                   placeholder="Name"
                   class="input w-full"
                   required
-                  autofocus
                 />
               </div>
 
