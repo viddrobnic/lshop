@@ -167,7 +167,6 @@ function SectionList(props: { storeId: number; sections: Section[] }) {
 
   const reorderMutation = useMutation(() => ({
     mutationFn: async (sections: Section[]) => {
-      await new Promise((r) => setTimeout(r, 2000));
       const ids = sections.map((sec) => sec.id);
       await apiFetch(`/stores/${props.storeId}/sections/reorder`, {
         method: "PUT",
@@ -256,7 +255,6 @@ function SectionListItem(props: {
   return (
     <div
       ref={props.ref}
-      {...(props.dragActivators || {})}
       class={cn(
         "group flex items-center gap-3 rounded-lg px-3 py-3 transition-colors",
         !props.isOptimistic && !props.isDragging && "hover:bg-base-200/50",
@@ -279,7 +277,10 @@ function SectionListItem(props: {
       </div>
       <span class="text-base font-medium">{props.name}</span>
       <Show when={!props.isOptimistic && !props.isDragging}>
-        <div class="ml-auto opacity-0 transition-opacity group-hover:opacity-50">
+        <div
+          {...(props.dragActivators || {})}
+          class="ml-auto flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded text-neutral-500 select-none"
+        >
           <GripVerticalIcon class="size-4" />
         </div>
       </Show>
@@ -298,7 +299,6 @@ function SectionItem(props: { section: Section; disabled?: boolean }) {
       dragActivators={props.disabled ? {} : sortable().dragActivators}
       transform={sortable().transform}
       class={cn(
-        !props.disabled && "cursor-grab",
         (sortable().isActiveDraggable || props.disabled) && "opacity-60",
         state.active.draggable && "transition-transform"
       )}
@@ -314,7 +314,6 @@ function CreateSectionForm(props: { storeId: number }) {
   const createSectionMutation = useMutation(() => ({
     mutationKey: ["addSection", props.storeId],
     mutationFn: async (name: string) => {
-      await new Promise((r) => setTimeout(r, 2000));
       await apiFetch(`/stores/${props.storeId}/sections`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
