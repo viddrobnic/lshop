@@ -49,7 +49,7 @@ export default function DeleteStoreDialog(props: {
           >
             ✕
           </button>
-          <h3 class="text-lg font-bold">Delete Store</h3>
+          <h3 class="text-lg font-bold">Delete</h3>
 
           <div class="py-4">
             <p>

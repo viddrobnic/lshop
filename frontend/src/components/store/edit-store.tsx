@@ -62,7 +62,7 @@ export default function EditStoreDialog(props: {
           >
             ✕
           </button>
-          <h3 class="text-lg font-bold">Edit Store</h3>
+          <h3 class="text-lg font-bold">Rename</h3>
 
           <form onSubmit={handleSubmit} ref={formRef}>
             <div class="py-4">
