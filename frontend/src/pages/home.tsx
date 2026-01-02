@@ -397,10 +397,10 @@ function UnassignedSection(props: {
   const { containers, itemMap } = useItemsContext();
   const droppable = createMemo(() => createDroppable(props.containerId));
 
-  const items = createMemo(() => containers()[props.containerId] || []);
+  const itemIds = createMemo(() => containers()[props.containerId] || []);
 
-  const actualItems = createMemo(() => {
-    return items()
+  const items = createMemo(() => {
+    return itemIds()
       .map((id) => itemMap().get(id))
       .filter((item): item is Item => item !== undefined);
   });
@@ -433,7 +433,7 @@ function UnassignedSection(props: {
           Unassigned
         </div>
         <div class="flex shrink-0 items-center justify-center rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-light text-neutral-500">
-          {actualItems().length}
+          {items().length}
         </div>
       </div>
 
@@ -441,15 +441,15 @@ function UnassignedSection(props: {
         <div class="divider my-0 h-0" />
       </Show>
 
-      <SortableProvider ids={items()}>
-        <For each={actualItems()}>
+      <SortableProvider ids={itemIds()}>
+        <For each={items()}>
           {(item, idx) => (
             <>
               <SortableItem
                 inset={props.mode === "global" ? 1 : 2}
                 item={item}
               />
-              <Show when={idx() < actualItems().length - 1}>
+              <Show when={idx() < items().length - 1}>
                 <div class="divider my-0 h-0" />
               </Show>
             </>
@@ -518,10 +518,10 @@ function SectionWithItems(props: { section: ItemListSection }) {
   );
   const droppable = createMemo(() => createDroppable(containerId()));
 
-  const items = createMemo(() => containers()[containerId()] || []);
+  const itemIds = createMemo(() => containers()[containerId()] || []);
 
-  const actualItems = createMemo(() => {
-    return items()
+  const items = createMemo(() => {
+    return itemIds()
       .map((id) => itemMap().get(id))
       .filter((item): item is Item => item !== undefined);
   });
@@ -537,7 +537,7 @@ function SectionWithItems(props: { section: ItemListSection }) {
           {props.section.name}
         </span>
         <div class="bg-primary/10 text-primary flex shrink-0 items-center justify-center rounded-md px-2 py-0.5 text-xs font-light">
-          {actualItems().length}
+          {items().length}
         </div>
         <div class="ml-auto">
           <AddItem
@@ -553,12 +553,12 @@ function SectionWithItems(props: { section: ItemListSection }) {
       </Show>
 
       {/* Section Items */}
-      <SortableProvider ids={items()}>
-        <For each={actualItems()}>
+      <SortableProvider ids={itemIds()}>
+        <For each={items()}>
           {(item, idx) => (
             <>
               <SortableItem inset={2} item={item} />
-              <Show when={idx() < actualItems().length - 1}>
+              <Show when={idx() < items().length - 1}>
                 <div class="divider my-0 h-0" />
               </Show>
             </>
