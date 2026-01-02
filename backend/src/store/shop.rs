@@ -1,5 +1,5 @@
 use serde::Serialize;
-use sqlx::{QueryBuilder, Sqlite, prelude::FromRow};
+use sqlx::prelude::FromRow;
 
 use crate::db::Db;
 
@@ -68,21 +68,4 @@ pub async fn get(db: &Db, id: i64) -> Result<Option<Store>, sqlx::Error> {
         .bind(id)
         .fetch_optional(db)
         .await
-}
-
-pub async fn list_for_ids(
-    db: &Db,
-    ids: impl Iterator<Item = i64>,
-) -> Result<Vec<Store>, sqlx::Error> {
-    let mut ids = ids.peekable();
-    if ids.peek().is_none() {
-        return Ok(vec![]);
-    }
-
-    let mut qb = QueryBuilder::<Sqlite>::new("SELECT * FROM stores WHERE id IN ");
-    qb.push_tuples(ids, |mut b, id| {
-        b.push_bind(id);
-    });
-
-    qb.build_query_as().fetch_all(db).await
 }

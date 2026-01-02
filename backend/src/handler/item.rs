@@ -1,7 +1,4 @@
-use std::{
-    cmp::Ordering,
-    collections::{HashMap, HashSet},
-};
+use std::{cmp::Ordering, collections::HashMap};
 
 use axum::{
     Json,
@@ -99,11 +96,8 @@ pub async fn list(State(db): State<Db>, _: User) -> Result<Json<ItemList>, Probl
     // Get stuff from db
     let items = store::item::list(&db).await?;
 
-    let store_ids: HashSet<i64> = items.iter().filter_map(|it| it.store_id).collect();
-    let stores = store::shop::list_for_ids(&db, store_ids.iter().cloned()).await?;
-
-    let section_ids: HashSet<i64> = items.iter().filter_map(|it| it.section_id).collect();
-    let sections = store::section::list_for_ids(&db, section_ids.iter().cloned()).await?;
+    let (stores, sections) =
+        tokio::try_join!(store::shop::list(&db), store::section::list_all(&db))?;
 
     // Construct hash maps
     let mut store_map: HashMap<i64, ItemListStore> = stores

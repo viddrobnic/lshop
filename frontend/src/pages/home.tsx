@@ -380,7 +380,7 @@ export default function Home() {
               <DragOverlay class="z-50">
                 <Show when={activeItem()}>
                   <SortableItem item={activeItem()!} inset={1} isOverlay />
-                </Show>
+                </Show>{" "}
               </DragOverlay>
             </DragDropProvider>
           </Match>
@@ -406,7 +406,7 @@ function UnassignedSection(props: {
   });
 
   return (
-    <>
+    <div ref={droppable().ref}>
       <div
         class={cn(
           "sticky flex items-center gap-3 bg-white py-3 pr-3",
@@ -437,26 +437,26 @@ function UnassignedSection(props: {
         </div>
       </div>
 
-      <div class="divider my-0 h-0" />
+      <Show when={items().length > 0}>
+        <div class="divider my-0 h-0" />
+      </Show>
 
-      <div ref={droppable().ref}>
-        <SortableProvider ids={items()}>
-          <For each={actualItems()}>
-            {(item, idx) => (
-              <>
-                <SortableItem
-                  inset={props.mode === "global" ? 1 : 2}
-                  item={item}
-                />
-                <Show when={idx() < actualItems().length - 1}>
-                  <div class="divider my-0 h-0" />
-                </Show>
-              </>
-            )}
-          </For>
-        </SortableProvider>
-      </div>
-    </>
+      <SortableProvider ids={items()}>
+        <For each={actualItems()}>
+          {(item, idx) => (
+            <>
+              <SortableItem
+                inset={props.mode === "global" ? 1 : 2}
+                item={item}
+              />
+              <Show when={idx() < actualItems().length - 1}>
+                <div class="divider my-0 h-0" />
+              </Show>
+            </>
+          )}
+        </For>
+      </SortableProvider>
+    </div>
   );
 }
 
@@ -496,15 +496,11 @@ function StoreWithItems(props: { store: ItemListStore }) {
         </div>
       </div>
 
-      <div class="divider my-0 h-0" />
-
       {/* Store Unassigned */}
-      <Show when={props.store.unassigned.length > 0}>
-        <UnassignedSection
-          containerId={getContainerId(props.store.id, undefined)}
-          mode="store"
-        />
-      </Show>
+      <UnassignedSection
+        containerId={getContainerId(props.store.id, undefined)}
+        mode="store"
+      />
 
       {/* Store Sections */}
       <For each={props.store.sections}>
@@ -531,7 +527,7 @@ function SectionWithItems(props: { section: ItemListSection }) {
   });
 
   return (
-    <>
+    <div ref={droppable().ref}>
       {/* Section Header */}
       <div class="sticky top-14 z-20 flex items-center gap-3 bg-white py-3 pr-3 pl-7">
         <div class="bg-primary/10 text-primary flex size-6 shrink-0 items-center justify-center rounded-md">
@@ -552,23 +548,23 @@ function SectionWithItems(props: { section: ItemListSection }) {
         </div>
       </div>
 
-      <div class="divider my-0 h-0" />
+      <Show when={items().length > 0}>
+        <div class="divider my-0 h-0" />
+      </Show>
 
       {/* Section Items */}
-      <div ref={droppable().ref}>
-        <SortableProvider ids={items()}>
-          <For each={actualItems()}>
-            {(item, idx) => (
-              <>
-                <SortableItem inset={2} item={item} />
-                <Show when={idx() < actualItems().length - 1}>
-                  <div class="divider my-0 h-0" />
-                </Show>
-              </>
-            )}
-          </For>
-        </SortableProvider>
-      </div>
-    </>
+      <SortableProvider ids={items()}>
+        <For each={actualItems()}>
+          {(item, idx) => (
+            <>
+              <SortableItem inset={2} item={item} />
+              <Show when={idx() < actualItems().length - 1}>
+                <div class="divider my-0 h-0" />
+              </Show>
+            </>
+          )}
+        </For>
+      </SortableProvider>
+    </div>
   );
 }

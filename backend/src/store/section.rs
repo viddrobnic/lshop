@@ -1,8 +1,5 @@
 use serde::Serialize;
-use sqlx::{
-    QueryBuilder, Sqlite,
-    prelude::{FromRow, Row},
-};
+use sqlx::prelude::{FromRow, Row};
 
 use crate::db::Db;
 
@@ -64,6 +61,10 @@ pub async fn list(db: &Db, store_id: i64) -> Result<Vec<Section>, sqlx::Error> {
         .await
 }
 
+pub async fn list_all(db: &Db) -> Result<Vec<Section>, sqlx::Error> {
+    sqlx::query_as("SELECT * FROM sections").fetch_all(db).await
+}
+
 pub async fn update(db: &Db, id: i64, name: &str) -> Result<Section, sqlx::Error> {
     let now = time::OffsetDateTime::now_utc();
 
@@ -116,21 +117,4 @@ pub async fn get(db: &Db, id: i64) -> Result<Option<Section>, sqlx::Error> {
         .bind(id)
         .fetch_optional(db)
         .await
-}
-
-pub async fn list_for_ids(
-    db: &Db,
-    ids: impl Iterator<Item = i64>,
-) -> Result<Vec<Section>, sqlx::Error> {
-    let mut ids = ids.peekable();
-    if ids.peek().is_none() {
-        return Ok(vec![]);
-    }
-
-    let mut qb = QueryBuilder::<Sqlite>::new("SELECT * FROM sections WHERE id IN ");
-    qb.push_tuples(ids, |mut b, id| {
-        b.push_bind(id);
-    });
-
-    qb.build_query_as().fetch_all(db).await
 }
