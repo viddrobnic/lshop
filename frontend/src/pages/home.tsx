@@ -9,6 +9,11 @@ import {
   createSignal,
   createEffect,
   onCleanup,
+  batch,
+  createContext,
+  useContext,
+  ParentProps,
+  Accessor,
 } from "solid-js";
 import {
   type Item,
@@ -16,11 +21,100 @@ import {
   ItemListSection,
   type ItemListStore,
   getTotal,
-  getTotalStore,
 } from "../data/items";
-import { CircleQuestionMarkIcon, PackageIcon, StoreIcon } from "lucide-solid";
+import {
+  CircleQuestionMarkIcon,
+  GripVerticalIcon,
+  PackageIcon,
+  StoreIcon,
+} from "lucide-solid";
 import { cn } from "../lib/utils";
 import AddItem from "../components/items/add-item";
+import {
+  DragDropProvider,
+  DragDropSensors,
+  DragOverlay,
+  SortableProvider,
+  createSortable,
+  createDroppable,
+  closestCenter,
+  useDragDropContext,
+  Draggable,
+  Droppable,
+  Id,
+  CollisionDetector,
+  mostIntersecting,
+} from "@thisbeyond/solid-dnd";
+import { createStore } from "solid-js/store";
+
+// Context for containers and itemMap
+type ItemsContextValue = {
+  containers: Accessor<Record<string, number[]>>;
+  itemMap: Accessor<Map<number, Item>>;
+};
+
+const ItemsContext = createContext<ItemsContextValue>();
+
+const useItemsContext = () => {
+  const context = useContext(ItemsContext);
+  if (!context) {
+    throw new Error("useItemsContext must be used within ItemsProvider");
+  }
+  return context;
+};
+
+function ItemsProvider(
+  props: ParentProps<{
+    containers: Record<string, number[]>;
+    itemMap: Accessor<Map<number, Item>>;
+  }>
+) {
+  return (
+    <ItemsContext.Provider
+      value={{
+        containers: () => props.containers,
+        itemMap: () => props.itemMap(),
+      }}
+    >
+      {props.children}
+    </ItemsContext.Provider>
+  );
+}
+
+// Container ID helper
+const getContainerId = (
+  storeId: number | undefined,
+  sectionId: number | undefined
+) => {
+  if (sectionId !== undefined && storeId !== undefined) {
+    return `section-${storeId}-${sectionId}`;
+  }
+  if (storeId !== undefined) {
+    return `store-${storeId}-unassigned`;
+  }
+  return "global-unassigned";
+};
+
+const parseContainerId = (containerId: string) => {
+  if (containerId === "global-unassigned") {
+    return { storeId: undefined, sectionId: undefined };
+  }
+
+  const sectionMatch = containerId.match(/^section-(\d+)-(\d+)$/);
+  if (sectionMatch) {
+    return {
+      storeId: parseInt(sectionMatch[1], 10),
+      sectionId: parseInt(sectionMatch[2], 10),
+    };
+  }
+
+  const storeMatch = containerId.match(/^store-(\d+)-unassigned$/);
+  if (storeMatch) {
+    return { storeId: parseInt(storeMatch[1], 10), sectionId: undefined };
+  }
+
+  return { storeId: undefined, sectionId: undefined };
+};
 
 export default function Home() {
   const data = useQuery(() => ({
@@ -35,6 +129,212 @@ export default function Home() {
       return undefined;
     }
   });
+
+  // From here on out thre is a lot of drag and drop logic. Bare with it...
+
+  // Build containers map: containerId -> item IDs
+  const buildContainers = () => {
+    if (!data.data) return {};
+
+    const containers: Record<string, number[]> = {};
+
+    // Global unassigned
+    containers[getContainerId(undefined, undefined)] = data.data.unassigned.map(
+      (item) => item.id
+    );
+
+    // Stores
+    for (const store of data.data.stores) {
+      // Store unassigned
+      containers[getContainerId(store.id, undefined)] = store.unassigned.map(
+        (item) => item.id
+      );
+
+      // Store sections
+      for (const section of store.sections) {
+        containers[getContainerId(store.id, section.id)] = section.items.map(
+          (item) => item.id
+        );
+      }
+    }
+
+    return containers;
+  };
+
+  const [containers, setContainers] = createStore<Record<string, number[]>>({});
+
+  // Initialize containers from data
+  createEffect(() => {
+    setContainers(buildContainers());
+  });
+
+  const containerIds = () => Object.keys(containers);
+
+  // Is item with given id a container
+  const isContainer = (id: Id) => containerIds().includes(String(id));
+
+  // Get container id of the item with given id
+  const getContainer = (id: Id) => {
+    for (const [key, items] of Object.entries(containers)) {
+      if (items.includes(Number(id))) {
+        return key;
+      }
+    }
+  };
+
+  // Item map for quick lookup
+  const itemMap = createMemo(() => {
+    if (!data.data) return new Map<number, Item>();
+
+    const map = new Map<number, Item>();
+    for (const item of data.data.unassigned) {
+      map.set(item.id, item);
+    }
+    for (const store of data.data.stores) {
+      for (const item of store.unassigned) {
+        map.set(item.id, item);
+      }
+      for (const section of store.sections) {
+        for (const item of section.items) {
+          map.set(item.id, item);
+        }
+      }
+    }
+    return map;
+  });
+
+  const [activeItem, setActiveItem] = createSignal<Item | null>(null);
+
+  const closestContainerOrItem: CollisionDetector = (
+    draggable,
+    droppables,
+    context
+  ) => {
+    const closestContainer = mostIntersecting(
+      draggable,
+      droppables.filter((droppable) => isContainer(droppable.id)),
+      context
+    );
+
+    if (!closestContainer) {
+      return null;
+    }
+
+    const containerItemIds = containers[String(closestContainer.id)] || [];
+    const closestItem = closestCenter(
+      draggable,
+      droppables.filter((droppable) =>
+        containerItemIds.includes(Number(droppable.id))
+      ),
+      context
+    );
+
+    if (!closestItem) {
+      return closestContainer;
+    }
+
+    if (getContainer(draggable.id) !== closestContainer.id) {
+      const isLastItem =
+        containerItemIds.indexOf(Number(closestItem.id)) ===
+        containerItemIds.length - 1;
+
+      if (isLastItem) {
+        const belowLastItem =
+          draggable.transformed.center.y > closestItem.transformed.center.y;
+
+        if (belowLastItem) {
+          return closestContainer;
+        }
+      }
+    }
+    return closestItem;
+  };
+
+  const move = (
+    draggable: Draggable,
+    droppable: Droppable,
+    onlyWhenChangingContainer = true
+  ) => {
+    const draggableContainer = getContainer(draggable.id);
+    const droppableContainer = isContainer(droppable.id)
+      ? String(droppable.id)
+      : getContainer(droppable.id);
+
+    if (
+      draggableContainer !== droppableContainer ||
+      !onlyWhenChangingContainer
+    ) {
+      const containerItemIds = containers[droppableContainer!] || [];
+      let index = containerItemIds.indexOf(Number(droppable.id));
+      if (index === -1) index = containerItemIds.length;
+
+      batch(() => {
+        setContainers(draggableContainer!, (items) =>
+          items.filter((item) => item !== Number(draggable.id))
+        );
+        setContainers(droppableContainer!, (items) => [
+          ...items.slice(0, index),
+          Number(draggable.id),
+          ...items.slice(index),
+        ]);
+      });
+    }
+  };
+
+  const onDragStart = ({ draggable }: { draggable: Draggable }) => {
+    const itemId = Number(draggable.id);
+    const item = itemMap().get(itemId);
+    setActiveItem(item ?? null);
+  };
+
+  const onDragOver = ({
+    draggable,
+    droppable,
+  }: {
+    draggable?: Draggable | null;
+    droppable?: Droppable | null;
+  }) => {
+    if (draggable && droppable) {
+      move(draggable, droppable);
+    }
+  };
+
+  const onDragEnd = ({
+    draggable,
+    droppable,
+  }: {
+    draggable?: Draggable | null;
+    droppable?: Droppable | null;
+  }) => {
+    if (draggable && droppable) {
+      move(draggable, droppable, false);
+
+      // Log the final position
+      const targetContainerId = isContainer(droppable.id)
+        ? String(droppable.id)
+        : getContainer(droppable.id);
+
+      if (targetContainerId) {
+        const { storeId, sectionId } = parseContainerId(targetContainerId);
+        const containerItems = containers[targetContainerId] || [];
+        const targetIndex = containerItems.indexOf(Number(draggable.id));
+
+        console.log("Item DnD Result:", {
+          itemId: Number(draggable.id),
+          targetStoreId: storeId,
+          targetSectionId: sectionId,
+          targetIndex: targetIndex === -1 ? containerItems.length : targetIndex,
+        });
+      }
+    }
+
+    setActiveItem(null);
+
+    // Reset to original data
+    // TODO: When mutation happens this probably won't be necessary, since successfull mutation will trigger rebuild (new data)
+    // But we might need to do it on error...
+    setContainers(buildContainers());
+  };
 
   return (
     <>
@@ -59,21 +359,56 @@ export default function Home() {
         </Match>
 
         <Match when={!!data.data}>
-          <div class="py-4">
-            <Show when={data.data!.unassigned.length > 0}>
-              <UnassignedSection items={data.data!.unassigned} mode="global" />
-            </Show>
-            <For each={data.data!.stores}>
-              {(store) => <Store store={store} />}
-            </For>
-          </div>
+          <DragDropProvider
+            onDragStart={onDragStart}
+            onDragOver={onDragOver}
+            onDragEnd={onDragEnd}
+            collisionDetector={closestContainerOrItem}
+          >
+            <DragDropSensors />
+            <ItemsProvider containers={containers} itemMap={itemMap}>
+              <div class="pt-4 pb-14 sm:pb-4">
+                {/* Global Unassigned Section */}
+                <Show when={data.data!.unassigned.length > 0}>
+                  <UnassignedSection
+                    containerId={getContainerId(undefined, undefined)}
+                    mode="global"
+                  />
+                </Show>
+
+                {/* Stores */}
+                <For each={data.data!.stores}>
+                  {(store) => <StoreWithItems store={store} />}
+                </For>
+              </div>
+            </ItemsProvider>
+            <DragOverlay class="z-50">
+              <Show when={activeItem()}>
+                <SortableItem item={activeItem()!} inset={1} isOverlay />
+              </Show>
+            </DragOverlay>
+          </DragDropProvider>
         </Match>
       </Switch>
     </>
   );
 }
 
-function UnassignedSection(props: { items: Item[]; mode: "global" | "store" }) {
+function UnassignedSection(props: {
+  containerId: string;
+  mode: "global" | "store";
+}) {
+  const { containers, itemMap } = useItemsContext();
+  const droppable = createMemo(() => createDroppable(props.containerId));
+
+  const items = createMemo(() => containers()[props.containerId] || []);
+
+  const actualItems = createMemo(() => {
+    return items()
+      .map((id) => itemMap().get(id))
+      .filter((item): item is Item => item !== undefined);
+  });
+
   return (
     <>
       <div
@@ -102,31 +437,54 @@ function UnassignedSection(props: { items: Item[]; mode: "global" | "store" }) {
           Unassigned
         </div>
         <div class="flex shrink-0 items-center justify-center rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-light text-neutral-500">
-          {props.items.length}
+          {actualItems().length}
         </div>
       </div>
 
       <div class="divider my-0 h-0" />
 
-      <For each={props.items}>
-        {(item, idx) => (
-          <>
-            <ListItem inset={props.mode === "global" ? 1 : 2} item={item} />
-            <Show when={idx() < props.items.length - 1}>
-              <div class="divider my-0 h-0" />
-            </Show>
-          </>
-        )}
-      </For>
+      <div ref={droppable().ref}>
+        <SortableProvider ids={items()}>
+          <For each={actualItems()}>
+            {(item, idx) => (
+              <>
+                <SortableItem
+                  inset={props.mode === "global" ? 1 : 2}
+                  item={item}
+                />
+                <Show when={idx() < actualItems().length - 1}>
+                  <div class="divider my-0 h-0" />
+                </Show>
+              </>
+            )}
+          </For>
+        </SortableProvider>
+      </div>
     </>
   );
 }
 
-function Store(props: { store: ItemListStore }) {
-  const total = createMemo(() => getTotalStore(props.store));
+function StoreWithItems(props: { store: ItemListStore }) {
+  const { containers } = useItemsContext();
+
+  // Calculate total from containers (current state during drag)
+  const total = createMemo(() => {
+    let count = 0;
+    // Store unassigned
+    const storeUnassignedId = getContainerId(props.store.id, undefined);
+    count += (containers()[storeUnassignedId] || []).length;
+
+    // Store sections
+    for (const section of props.store.sections) {
+      const sectionId = getContainerId(props.store.id, section.id);
+      count += (containers()[sectionId] || []).length;
+    }
+    return count;
+  });
 
   return (
     <>
+      {/* Store Header */}
       <div class="sticky top-0 z-30 flex items-center gap-3 bg-white px-3 py-3">
         <div class="bg-secondary/10 text-secondary flex size-7 shrink-0 items-center justify-center rounded-md">
           <StoreIcon class="size-4" />
@@ -144,20 +502,41 @@ function Store(props: { store: ItemListStore }) {
 
       <div class="divider my-0 h-0" />
 
+      {/* Store Unassigned */}
       <Show when={props.store.unassigned.length > 0}>
-        <UnassignedSection items={props.store.unassigned} mode="store" />
+        <UnassignedSection
+          containerId={getContainerId(props.store.id, undefined)}
+          mode="store"
+        />
       </Show>
 
+      {/* Store Sections */}
       <For each={props.store.sections}>
-        {(section) => <StoreSection section={section} />}
+        {(section) => <SectionWithItems section={section} />}
       </For>
     </>
   );
 }
 
-function StoreSection(props: { section: ItemListSection }) {
+function SectionWithItems(props: { section: ItemListSection }) {
+  const { containers, itemMap } = useItemsContext();
+
+  const containerId = createMemo(() =>
+    getContainerId(props.section.store_id, props.section.id)
+  );
+  const droppable = createMemo(() => createDroppable(containerId()));
+
+  const items = createMemo(() => containers()[containerId()] || []);
+
+  const actualItems = createMemo(() => {
+    return items()
+      .map((id) => itemMap().get(id))
+      .filter((item): item is Item => item !== undefined);
+  });
+
   return (
     <>
+      {/* Section Header */}
       <div class="sticky top-14 z-20 flex items-center gap-3 bg-white py-3 pr-3 pl-7">
         <div class="bg-primary/10 text-primary flex size-6 shrink-0 items-center justify-center rounded-md">
           <PackageIcon class="size-3.5" />
@@ -166,7 +545,7 @@ function StoreSection(props: { section: ItemListSection }) {
           {props.section.name}
         </span>
         <div class="bg-primary/10 text-primary flex shrink-0 items-center justify-center rounded-md px-2 py-0.5 text-xs font-light">
-          {props.section.items.length}
+          {actualItems().length}
         </div>
         <div class="ml-auto">
           <AddItem
@@ -179,24 +558,54 @@ function StoreSection(props: { section: ItemListSection }) {
 
       <div class="divider my-0 h-0" />
 
-      <For each={props.section.items}>
-        {(item, idx) => (
-          <>
-            <ListItem inset={2} item={item} />
-            <Show when={idx() < props.section.items.length - 1}>
-              <div class="divider my-0 h-0" />
-            </Show>
-          </>
-        )}
-      </For>
+      {/* Section Items */}
+      <div ref={droppable().ref}>
+        <SortableProvider ids={items()}>
+          <For each={actualItems()}>
+            {(item, idx) => (
+              <>
+                <SortableItem inset={2} item={item} />
+                <Show when={idx() < actualItems().length - 1}>
+                  <div class="divider my-0 h-0" />
+                </Show>
+              </>
+            )}
+          </For>
+        </SortableProvider>
+      </div>
     </>
   );
 }
 
-function ListItem(props: { inset: number; item: Item }) {
+function SortableItem(props: {
+  inset: number;
+  item: Item;
+  isOverlay?: boolean;
+}) {
+  const sortable = createMemo(() => {
+    if (props.isOverlay) {
+      return null;
+    }
+
+    return createSortable(props.item.id);
+  });
+
+  const dndState = () => {
+    if (props.isOverlay) {
+      return null;
+    }
+
+    const [state] = useDragDropContext()!;
+    return state;
+  };
+
   const [checked, setChecked] = createSignal(false);
 
   createEffect(() => {
+    if (props.isOverlay) {
+      return;
+    }
+
     if (!checked()) {
       return;
     }
@@ -209,11 +618,27 @@ function ListItem(props: { inset: number; item: Item }) {
     onCleanup(() => clearTimeout(timer));
   });
 
+  // Only apply transform when something is being dragged
+  const shouldTransform = () =>
+    !props.isOverlay && dndState()?.active.draggable && sortable()?.transform;
+
   return (
     <div
-      class="flex items-center gap-4 py-3 pr-3 pl-4 text-sm"
+      ref={sortable()?.ref}
+      class={cn(
+        "flex items-center gap-4 py-3 pr-3 text-sm",
+        !props.isOverlay && sortable()?.isActiveDraggable && "opacity-25",
+        !props.isOverlay &&
+          dndState()?.active.draggable &&
+          "transition-transform",
+        props.isOverlay &&
+          "ring-primary/40 rounded-lg bg-white shadow-lg ring-1"
+      )}
       style={{
-        "margin-left": `calc(${props.inset} * 1rem)`,
+        "padding-left": `calc(${props.inset} * 1rem + 1rem)`,
+        transform: shouldTransform()
+          ? `translate3d(${sortable()!.transform.x}px, ${sortable()!.transform.y}px, 0)`
+          : undefined,
       }}
     >
       <input
@@ -221,8 +646,16 @@ function ListItem(props: { inset: number; item: Item }) {
         class="checkbox checkbox-secondary checkbox-sm"
         checked={checked()}
         onChange={(e) => setChecked(e.currentTarget.checked)}
+        disabled={props.isOverlay}
       />
-      {props.item.name}
+      <span class="flex-1">{props.item.name}</span>
+
+      <div
+        {...(sortable()?.dragActivators || {})}
+        class="flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded text-neutral-500 select-none"
+      >
+        <GripVerticalIcon class="size-4" />
+      </div>
     </div>
   );
 }
