@@ -49,7 +49,7 @@ export const QueryProvider: ParentComponent = (props) => {
   return (
     <QueryClientProvider client={queryClient}>
       {props.children}
-      <SolidQueryDevtools />
+      <SolidQueryDevtools buttonPosition="bottom-left" />
     </QueryClientProvider>
   );
 };

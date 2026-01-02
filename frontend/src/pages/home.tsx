@@ -29,13 +29,13 @@ export default function Home() {
 
   return (
     <>
-      <div class="flex items-center justify-between px-4">
+      <div class="flex items-center px-4">
         <h1 class="text-primary text-3xl font-bold">Items</h1>
-        <AddItem mode="global" />
       </div>
       <Show when={total() !== undefined}>
         <div class="px-4 text-sm">{total()} total items</div>
       </Show>
+      <AddItem mode="global" />
 
       <Switch>
         <Match when={data.isPending}>
@@ -50,7 +50,7 @@ export default function Home() {
         </Match>
 
         <Match when={!!data.data}>
-          <div class="pt-4">
+          <div class="py-4">
             <Show when={data.data!.unassigned.length > 0}>
               <UnassignedSection items={data.data!.unassigned} mode="global" />
             </Show>

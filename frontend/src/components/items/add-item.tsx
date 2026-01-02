@@ -1,8 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/solid-query";
-import { createSignal } from "solid-js";
+import { createSignal, JSX, Match, Show, Switch } from "solid-js";
 import { apiFetch } from "../../api";
 import { PlusIcon } from "lucide-solid";
 import ModifyDialog from "../modify-dialog";
+import { cn } from "../../lib/utils";
 
 interface AddItemProps {
   store_id?: number;
@@ -34,7 +35,7 @@ export default function AddItem(props: AddItemProps) {
   const buttonClass = () => {
     switch (props.mode) {
       case "global":
-        return "btn btn-secondary btn-soft";
+        return "btn btn-secondary btn-circle btn-lg";
       case "store":
         return "btn btn-secondary btn-ghost btn-sm";
       case "section":
@@ -50,10 +51,28 @@ export default function AddItem(props: AddItemProps) {
       open={open}
       setOpen={setOpen}
     >
-      <button class={buttonClass()} onClick={() => setOpen(true)}>
-        <PlusIcon class="mr-1 size-4" />
-        Add
-      </button>
+      <Switch>
+        <Match when={props.mode === "global"}>
+          <div class="fab bottom-20 sm:bottom-4">
+            <button class={buttonClass()} onClick={() => setOpen(true)}>
+              <PlusIcon />
+            </button>
+          </div>
+        </Match>
+
+        <Match when={props.mode === "store" || props.mode === "section"}>
+          <button
+            class={cn(
+              "btn btn-ghost btn-sm",
+              props.mode === "store" ? "btn-secondary" : "btn-primary"
+            )}
+            onClick={() => setOpen(true)}
+          >
+            <PlusIcon class="mr-1 size-4" />
+            Add
+          </button>
+        </Match>
+      </Switch>
     </ModifyDialog>
   );
 }

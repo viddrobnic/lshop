@@ -93,7 +93,7 @@ function Dock() {
   const logoutMutation = useLogoutMutation();
 
   return (
-    <nav class="dock bg-white shadow md:hidden">
+    <nav class="dock z-50 bg-white shadow md:hidden">
       <For each={navItems}>
         {(item) => (
           <A href={item.href} activeClass="dock-active" end>
