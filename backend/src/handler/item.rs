@@ -3,7 +3,11 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
-use axum::{Json, extract::State, http::StatusCode};
+use axum::{
+    Json,
+    extract::{Path, State},
+    http::StatusCode,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -182,6 +186,26 @@ pub async fn list(State(db): State<Db>, _: User) -> Result<Json<ItemList>, Probl
     }
 
     Ok(Json(list))
+}
+
+#[derive(Deserialize)]
+pub struct ItemUpdateReq {
+    name: String,
+    checked: bool,
+}
+
+pub async fn update(
+    State(db): State<Db>,
+    _: User,
+    Path(id): Path<i64>,
+    Json(req): Json<ItemUpdateReq>,
+) -> Result<Json<Item>, Problem> {
+    let item = store::item::update(&db, id, &req.name, req.checked).await?;
+    let Some(item) = item else {
+        return Err(Problem::not_found());
+    };
+
+    Ok(Json(item))
 }
 
 fn cmp_items(a: &Item, b: &Item) -> Ordering {

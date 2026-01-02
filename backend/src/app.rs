@@ -40,7 +40,9 @@ fn create_app(state: AppState) -> Router {
                 // Items
                 .nest(
                     "/items",
-                    Router::new().route("/", get(item::list).post(item::create)),
+                    Router::new()
+                        .route("/", get(item::list).post(item::create))
+                        .route("/{item_id}", put(item::update)),
                 )
                 // Organize
                 .route("/stores/{store_id}/organize", post(organize::organize)),

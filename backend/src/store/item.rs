@@ -91,6 +91,25 @@ pub async fn organize(
     tx.commit().await
 }
 
+pub async fn update(
+    db: &Db,
+    id: i64,
+    name: &str,
+    checked: bool,
+) -> Result<Option<Item>, sqlx::Error> {
+    let now = time::OffsetDateTime::now_utc();
+
+    sqlx::query_as(
+        "UPDATE items SET name = ?, checked = ?, updated_at = ? WHERE id = ? RETURNING *",
+    )
+    .bind(name)
+    .bind(checked)
+    .bind(now)
+    .bind(id)
+    .fetch_optional(db)
+    .await
+}
+
 async fn organize_section(
     tx: &mut sqlx::SqliteTransaction<'_>,
     store_id: i64,
