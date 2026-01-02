@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/solid-query";
-import { createSignal, JSX, Match, Show, Switch } from "solid-js";
+import { createSignal, Match, Switch } from "solid-js";
 import { apiFetch } from "../../api";
 import { PlusIcon } from "lucide-solid";
 import ModifyDialog from "../modify-dialog";

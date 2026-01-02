@@ -8,7 +8,6 @@ import {
   For,
   createSignal,
   createEffect,
-  onCleanup,
   batch,
   createContext,
   useContext,
@@ -22,12 +21,7 @@ import {
   type ItemListStore,
   getTotal,
 } from "../data/items";
-import {
-  CircleQuestionMarkIcon,
-  GripVerticalIcon,
-  PackageIcon,
-  StoreIcon,
-} from "lucide-solid";
+import { CircleQuestionMarkIcon, PackageIcon, StoreIcon } from "lucide-solid";
 import { cn } from "../lib/utils";
 import AddItem from "../components/items/add-item";
 import {
@@ -35,10 +29,8 @@ import {
   DragDropSensors,
   DragOverlay,
   SortableProvider,
-  createSortable,
   createDroppable,
   closestCenter,
-  useDragDropContext,
   Draggable,
   Droppable,
   Id,
@@ -46,6 +38,8 @@ import {
   mostIntersecting,
 } from "@thisbeyond/solid-dnd";
 import { createStore } from "solid-js/store";
+import SortableItem from "../components/items/sortable-item";
+import { ItemsCheckerProvider } from "../components/items/item-checker";
 
 // Context for containers and itemMap
 type ItemsContextValue = {
@@ -346,50 +340,52 @@ export default function Home() {
       </Show>
       <AddItem mode="global" />
 
-      <Switch>
-        <Match when={data.isPending}>
-          <div class="px-4 pt-4 text-sm text-neutral-600">
-            <span class="loading loading-spinner loading-sm mr-3" />
-            Loading...
-          </div>
-        </Match>
+      <ItemsCheckerProvider>
+        <Switch>
+          <Match when={data.isPending}>
+            <div class="px-4 pt-4 text-sm text-neutral-600">
+              <span class="loading loading-spinner loading-sm mr-3" />
+              Loading...
+            </div>
+          </Match>
 
-        <Match when={data.isError}>
-          <div class="px-4 pt-4">Error: {data.error?.message}</div>
-        </Match>
+          <Match when={data.isError}>
+            <div class="px-4 pt-4">Error: {data.error?.message}</div>
+          </Match>
 
-        <Match when={!!data.data}>
-          <DragDropProvider
-            onDragStart={onDragStart}
-            onDragOver={onDragOver}
-            onDragEnd={onDragEnd}
-            collisionDetector={closestContainerOrItem}
-          >
-            <DragDropSensors />
-            <ItemsProvider containers={containers} itemMap={itemMap}>
-              <div class="pt-4 pb-14 sm:pb-4">
-                {/* Global Unassigned Section */}
-                <Show when={data.data!.unassigned.length > 0}>
-                  <UnassignedSection
-                    containerId={getContainerId(undefined, undefined)}
-                    mode="global"
-                  />
+          <Match when={!!data.data}>
+            <DragDropProvider
+              onDragStart={onDragStart}
+              onDragOver={onDragOver}
+              onDragEnd={onDragEnd}
+              collisionDetector={closestContainerOrItem}
+            >
+              <DragDropSensors />
+              <ItemsProvider containers={containers} itemMap={itemMap}>
+                <div class="pt-4 pb-14 sm:pb-4">
+                  {/* Global Unassigned Section */}
+                  <Show when={data.data!.unassigned.length > 0}>
+                    <UnassignedSection
+                      containerId={getContainerId(undefined, undefined)}
+                      mode="global"
+                    />
+                  </Show>
+
+                  {/* Stores */}
+                  <For each={data.data!.stores}>
+                    {(store) => <StoreWithItems store={store} />}
+                  </For>
+                </div>
+              </ItemsProvider>
+              <DragOverlay class="z-50">
+                <Show when={activeItem()}>
+                  <SortableItem item={activeItem()!} inset={1} isOverlay />
                 </Show>
-
-                {/* Stores */}
-                <For each={data.data!.stores}>
-                  {(store) => <StoreWithItems store={store} />}
-                </For>
-              </div>
-            </ItemsProvider>
-            <DragOverlay class="z-50">
-              <Show when={activeItem()}>
-                <SortableItem item={activeItem()!} inset={1} isOverlay />
-              </Show>
-            </DragOverlay>
-          </DragDropProvider>
-        </Match>
-      </Switch>
+              </DragOverlay>
+            </DragDropProvider>
+          </Match>
+        </Switch>
+      </ItemsCheckerProvider>
     </>
   );
 }
@@ -574,88 +570,5 @@ function SectionWithItems(props: { section: ItemListSection }) {
         </SortableProvider>
       </div>
     </>
-  );
-}
-
-function SortableItem(props: {
-  inset: number;
-  item: Item;
-  isOverlay?: boolean;
-}) {
-  const sortable = createMemo(() => {
-    if (props.isOverlay) {
-      return null;
-    }
-
-    return createSortable(props.item.id);
-  });
-
-  const dndState = () => {
-    if (props.isOverlay) {
-      return null;
-    }
-
-    const [state] = useDragDropContext()!;
-    return state;
-  };
-
-  const [checked, setChecked] = createSignal(false);
-
-  createEffect(() => {
-    if (props.isOverlay) {
-      return;
-    }
-
-    if (!checked()) {
-      return;
-    }
-
-    const timer = setTimeout(
-      () => console.log("starting mutation for", props.item.name),
-      2000
-    );
-
-    onCleanup(() => clearTimeout(timer));
-  });
-
-  // Only apply transform when something is being dragged
-  const shouldTransform = () =>
-    !props.isOverlay && dndState()?.active.draggable && sortable()?.transform;
-
-  return (
-    <div
-      ref={sortable()?.ref}
-      class={cn(
-        "flex items-center gap-4 py-3 pr-3 text-sm",
-        !props.isOverlay && sortable()?.isActiveDraggable && "opacity-25",
-        !props.isOverlay &&
-          dndState()?.active.draggable &&
-          "transition-transform",
-        props.isOverlay &&
-          "ring-primary/40 rounded-lg bg-white shadow-lg ring-1"
-      )}
-      style={{
-        "padding-left": `calc(${props.inset} * 1rem + 1rem)`,
-        transform: shouldTransform()
-          ? `translate3d(${sortable()!.transform.x}px, ${sortable()!.transform.y}px, 0)`
-          : undefined,
-      }}
-    >
-      <input
-        type="checkbox"
-        class="checkbox checkbox-secondary checkbox-sm"
-        checked={checked()}
-        onChange={(e) => setChecked(e.currentTarget.checked)}
-        disabled={props.isOverlay}
-      />
-      <span class="flex-1">{props.item.name}</span>
-
-      <div
-        {...(sortable()?.dragActivators || {})}
-        class="flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded text-neutral-500 select-none"
-      >
-        <GripVerticalIcon class="size-4" />
-      </div>
-    </div>
   );
 }

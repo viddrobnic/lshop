@@ -1,0 +1,107 @@
+import { createMemo } from "solid-js";
+import { Item } from "../../data/items";
+import { createSortable, useDragDropContext } from "@thisbeyond/solid-dnd";
+import { cn } from "../../lib/utils";
+import { GripVerticalIcon } from "lucide-solid";
+import { useMutation, useQueryClient } from "@tanstack/solid-query";
+import { apiFetch } from "../../api";
+import { useItemCheckerContext } from "./item-checker";
+
+export default function SortableItem(props: {
+  inset: number;
+  item: Item;
+  isOverlay?: boolean;
+}) {
+  const sortable = createMemo(() => {
+    if (props.isOverlay) {
+      return null;
+    }
+
+    return createSortable(props.item.id);
+  });
+
+  const dndState = () => {
+    if (props.isOverlay) {
+      return null;
+    }
+
+    const [state] = useDragDropContext()!;
+    return state;
+  };
+
+  const queryClient = useQueryClient();
+  const checkedMutation = useMutation(() => ({
+    mutationFn: async (checked: boolean) =>
+      apiFetch(`/items/${props.item.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: props.item.name,
+          checked,
+        }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["items"],
+      });
+    },
+  }));
+
+  const { isChecked, setChecked, setUnchecked } = useItemCheckerContext();
+
+  const checked = () => isChecked(props.item.id);
+  const onChecked = (checked: boolean) => {
+    if (checked) {
+      const t = setTimeout(() => checkedMutation.mutate(true), 2000);
+      setChecked(props.item.id, t);
+    } else {
+      setUnchecked(props.item.id);
+    }
+  };
+
+  // Only apply transform when something is being dragged
+  const shouldTransform = () =>
+    !props.isOverlay && dndState()?.active.draggable && sortable()?.transform;
+
+  return (
+    <div
+      ref={sortable()?.ref}
+      class={cn(
+        "flex items-center gap-4 py-3 pr-3 text-sm",
+        // Change opacity if being dragged and not overlay
+        !props.isOverlay && sortable()?.isActiveDraggable && "opacity-60",
+        // Set transform when anything is being dragged
+        !props.isOverlay &&
+          dndState()?.active.draggable &&
+          "transition-transform",
+        // If it's overlay add a ring and shadow
+        props.isOverlay &&
+          "ring-primary/40 rounded-lg bg-white shadow-lg ring-1",
+        // Disabled state
+        checkedMutation.isPending && "opacity-60"
+      )}
+      style={{
+        "padding-left": `calc(${props.inset} * 1rem + 1rem)`,
+        transform: shouldTransform()
+          ? `translate3d(${sortable()!.transform.x}px, ${sortable()!.transform.y}px, 0)`
+          : undefined,
+      }}
+    >
+      <input
+        type="checkbox"
+        class="checkbox checkbox-secondary checkbox-sm"
+        checked={checked()}
+        onChange={(e) => onChecked(e.currentTarget.checked)}
+        disabled={props.isOverlay || checkedMutation.isPending}
+      />
+      <span class="flex-1">{props.item.name}</span>
+
+      <div
+        {...(sortable()?.dragActivators || {})}
+        class="flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded text-neutral-500 select-none"
+      >
+        <GripVerticalIcon class="size-4" />
+      </div>
+    </div>
+  );
+}
