@@ -27,10 +27,16 @@ export type ItemList = {
 export function getTotal(list: ItemList): number {
   let total = list.unassigned.length;
   for (const store of list.stores) {
-    total += store.unassigned.length;
-    for (const section of store.sections) {
-      total += section.items.length;
-    }
+    total += getTotalStore(store);
+  }
+
+  return total;
+}
+
+export function getTotalStore(store: ItemListStore): number {
+  let total = store.unassigned.length;
+  for (const section of store.sections) {
+    total += section.items.length;
   }
 
   return total;
