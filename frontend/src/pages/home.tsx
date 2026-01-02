@@ -1,6 +1,15 @@
 import { useQuery } from "@tanstack/solid-query";
 import { apiFetch } from "../api";
-import { createMemo, Show, Switch, Match, For } from "solid-js";
+import {
+  createMemo,
+  Show,
+  Switch,
+  Match,
+  For,
+  createSignal,
+  createEffect,
+  onCleanup,
+} from "solid-js";
 import {
   type Item,
   type ItemList,
@@ -185,6 +194,21 @@ function StoreSection(props: { section: ItemListSection }) {
 }
 
 function ListItem(props: { inset: number; item: Item }) {
+  const [checked, setChecked] = createSignal(false);
+
+  createEffect(() => {
+    if (!checked()) {
+      return;
+    }
+
+    const timer = setTimeout(
+      () => console.log("starting mutation for", props.item.name),
+      2000
+    );
+
+    onCleanup(() => clearTimeout(timer));
+  });
+
   return (
     <div
       class="flex items-center gap-4 py-3 pr-3 pl-4 text-sm"
@@ -194,8 +218,9 @@ function ListItem(props: { inset: number; item: Item }) {
     >
       <input
         type="checkbox"
-        checked={false}
         class="checkbox checkbox-secondary checkbox-sm"
+        checked={checked()}
+        onChange={(e) => setChecked(e.currentTarget.checked)}
       />
       {props.item.name}
     </div>
