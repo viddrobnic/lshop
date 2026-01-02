@@ -65,15 +65,14 @@ export default function Home() {
 }
 
 function UnassignedSection(props: { items: Item[]; mode: "global" | "store" }) {
-  const inset = () => (props.mode === "global" ? 0 : 1);
-
   return (
     <>
       <div
-        class="my-3 flex items-center gap-3 px-3"
-        style={{
-          "margin-left": `calc(${inset()} * 1rem)`,
-        }}
+        class={cn(
+          "sticky flex items-center gap-3 bg-white py-3 pr-3",
+          props.mode === "global" ? "top-0 z-30" : "top-14 z-20",
+          props.mode === "global" ? "pl-3" : "pl-7"
+        )}
       >
         <div
           class={cn(
@@ -103,7 +102,7 @@ function UnassignedSection(props: { items: Item[]; mode: "global" | "store" }) {
       <For each={props.items}>
         {(item, idx) => (
           <>
-            <ListItem inset={inset() + 1} item={item} />
+            <ListItem inset={props.mode === "global" ? 1 : 2} item={item} />
             <Show when={idx() < props.items.length - 1}>
               <div class="divider my-0 h-0" />
             </Show>
@@ -119,7 +118,7 @@ function Store(props: { store: ItemListStore }) {
 
   return (
     <>
-      <div class="mt-1 flex items-center gap-3 px-3 py-3">
+      <div class="sticky top-0 z-30 flex items-center gap-3 bg-white px-3 py-3">
         <div class="bg-secondary/10 text-secondary flex size-7 shrink-0 items-center justify-center rounded-md">
           <StoreIcon class="size-4" />
         </div>
@@ -150,7 +149,7 @@ function Store(props: { store: ItemListStore }) {
 function StoreSection(props: { section: ItemListSection }) {
   return (
     <>
-      <div class="mt-0.5 ml-4 flex items-center gap-3 px-3 py-3">
+      <div class="sticky top-14 z-20 flex items-center gap-3 bg-white py-3 pr-3 pl-7">
         <div class="bg-primary/10 text-primary flex size-6 shrink-0 items-center justify-center rounded-md">
           <PackageIcon class="size-3.5" />
         </div>
