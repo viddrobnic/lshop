@@ -11,6 +11,7 @@ import {
 } from "../data/items";
 import { CircleQuestionMarkIcon, PackageIcon, StoreIcon } from "lucide-solid";
 import { cn } from "../lib/utils";
+import AddItem from "../components/items/add-item";
 
 export default function Home() {
   const data = useQuery(() => ({
@@ -28,7 +29,10 @@ export default function Home() {
 
   return (
     <>
-      <h1 class="text-primary px-4 text-3xl font-bold">Items</h1>
+      <div class="flex items-center justify-between px-4">
+        <h1 class="text-primary text-3xl font-bold">Items</h1>
+        <AddItem mode="global" />
+      </div>
       <Show when={total() !== undefined}>
         <div class="px-4 text-sm">{total()} total items</div>
       </Show>
@@ -125,6 +129,9 @@ function Store(props: { store: ItemListStore }) {
         <div class="bg-secondary/10 text-secondary flex shrink-0 items-center justify-center rounded-md px-2 py-0.5 text-xs font-light">
           {total()}
         </div>
+        <div class="ml-auto">
+          <AddItem store_id={props.store.id} mode="store" />
+        </div>
       </div>
 
       <div class="divider my-0 h-0" />
@@ -152,6 +159,13 @@ function StoreSection(props: { section: ItemListSection }) {
         </span>
         <div class="bg-primary/10 text-primary flex shrink-0 items-center justify-center rounded-md px-2 py-0.5 text-xs font-light">
           {props.section.items.length}
+        </div>
+        <div class="ml-auto">
+          <AddItem
+            store_id={props.section.store_id}
+            section_id={props.section.id}
+            mode="section"
+          />
         </div>
       </div>
 
