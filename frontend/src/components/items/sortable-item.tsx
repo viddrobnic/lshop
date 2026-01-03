@@ -15,6 +15,7 @@ export default function SortableItem(props: {
   inset: number;
   item: Item;
   isOverlay?: boolean;
+  disabled?: boolean;
 }) {
   const sortable = createMemo(() => {
     if (props.isOverlay) {
@@ -35,14 +36,9 @@ export default function SortableItem(props: {
 
   const queryClient = useQueryClient();
   const checkedMutation = useMutation(() => ({
-    mutationFn: async (checked: boolean) =>
-      apiFetch(`/items/${props.item.id}`, {
+    mutationFn: async () =>
+      apiFetch(`/items/${props.item.id}/checked`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: props.item.name,
-          checked,
-        }),
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
@@ -57,7 +53,7 @@ export default function SortableItem(props: {
   const onChecked = (checked: boolean) => {
     if (checked) {
       const t = setTimeout(
-        () => checkedMutation.mutate(true),
+        () => checkedMutation.mutate(),
         ITEM_CHECKED_DELAY_MS
       );
       setChecked(props.item.id, t);
@@ -69,6 +65,14 @@ export default function SortableItem(props: {
   // Only apply transform when something is being dragged
   const shouldTransform = () =>
     !props.isOverlay && dndState()?.active.draggable && sortable()?.transform;
+
+  const dragActivators = () => {
+    if (props.disabled) {
+      return {};
+    }
+
+    return sortable()?.dragActivators || {};
+  };
 
   return (
     <div
@@ -85,7 +89,7 @@ export default function SortableItem(props: {
         props.isOverlay &&
           "ring-primary/40 rounded-lg bg-white shadow-lg ring-1",
         // Disabled state
-        checkedMutation.isPending && "opacity-60"
+        (checkedMutation.isPending || props.disabled) && "opacity-60"
       )}
       style={{
         "padding-left": `calc(${props.inset} * 1rem + 1rem)`,
@@ -99,13 +103,18 @@ export default function SortableItem(props: {
         class="checkbox checkbox-secondary checkbox-sm"
         checked={checked()}
         onChange={(e) => onChecked(e.currentTarget.checked)}
-        disabled={props.isOverlay || checkedMutation.isPending}
+        disabled={
+          props.isOverlay || checkedMutation.isPending || props.disabled
+        }
       />
       <span class="flex-1">{props.item.name}</span>
 
       <div
-        {...(sortable()?.dragActivators || {})}
-        class="flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded pr-1 text-neutral-500 select-none"
+        {...dragActivators()}
+        class={cn(
+          "flex size-7 shrink-0 touch-none items-center justify-center rounded pr-1 text-neutral-500 select-none",
+          !props.disabled && "cursor-grab"
+        )}
       >
         <GripVerticalIcon class="size-4" />
       </div>

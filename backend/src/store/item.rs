@@ -91,23 +91,126 @@ pub async fn organize(
     tx.commit().await
 }
 
-pub async fn update(
+pub async fn rename(db: &Db, id: i64, name: &str) -> Result<Option<Item>, sqlx::Error> {
+    let now = time::OffsetDateTime::now_utc();
+
+    sqlx::query_as("UPDATE items SET name = ?, updated_at = ? WHERE id = ? RETURNING *")
+        .bind(name)
+        .bind(now)
+        .bind(id)
+        .fetch_optional(db)
+        .await
+}
+
+pub async fn set_checked(db: &Db, id: i64) -> Result<Option<Item>, sqlx::Error> {
+    let now = time::OffsetDateTime::now_utc();
+    let mut tx = db.begin().await?;
+
+    let Some(item): Option<Item> = sqlx::query_as("SELECT * FROM items WHERE id = ?")
+        .bind(id)
+        .fetch_optional(&mut *tx)
+        .await?
+    else {
+        tx.rollback().await?;
+        return Ok(None);
+    };
+
+    if !item.checked {
+        sqlx::query(
+            "UPDATE items 
+             SET ord = ord - 1, updated_at = ?
+             WHERE checked = FALSE
+               AND store_id IS ?
+               AND section_id IS ?
+               AND ord > ?",
+        )
+        .bind(now)
+        .bind(item.store_id)
+        .bind(item.section_id)
+        .bind(item.ord)
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    let updated =
+        sqlx::query_as("UPDATE items SET checked = TRUE, updated_at = ? WHERE id = ? RETURNING *")
+            .bind(now)
+            .bind(id)
+            .fetch_one(&mut *tx)
+            .await?;
+
+    tx.commit().await?;
+    Ok(Some(updated))
+}
+
+pub async fn move_item(
     db: &Db,
     id: i64,
-    name: &str,
-    checked: bool,
+    store_id: Option<i64>,
+    section_id: Option<i64>,
+    index: i64,
 ) -> Result<Option<Item>, sqlx::Error> {
     let now = time::OffsetDateTime::now_utc();
 
-    sqlx::query_as(
-        "UPDATE items SET name = ?, checked = ?, updated_at = ? WHERE id = ? RETURNING *",
+    let mut tx = db.begin().await?;
+
+    let Some(item): Option<Item> =
+        sqlx::query_as("SELECT * FROM items WHERE id = ? AND checked = FALSE")
+            .bind(id)
+            .fetch_optional(&mut *tx)
+            .await?
+    else {
+        tx.rollback().await?;
+        return Ok(None);
+    };
+
+    sqlx::query(
+        "UPDATE items 
+         SET ord = ord - 1, updated_at = ?
+         WHERE checked = FALSE
+           AND store_id IS ?
+           AND section_id IS ?
+           AND ord > ?",
     )
-    .bind(name)
-    .bind(checked)
+    .bind(now)
+    .bind(item.store_id)
+    .bind(item.section_id)
+    .bind(item.ord)
+    .execute(&mut *tx)
+    .await?;
+
+    sqlx::query(
+        "UPDATE items 
+         SET ord = ord + 1, updated_at = ?
+         WHERE checked = FALSE
+           AND store_id IS ?
+           AND section_id IS ?
+           AND ord >= ?",
+    )
+    .bind(now)
+    .bind(store_id)
+    .bind(section_id)
+    .bind(index)
+    .execute(&mut *tx)
+    .await?;
+
+    let updated = sqlx::query_as(
+        "UPDATE items
+         SET store_id = ?, section_id = ?, ord = ?, updated_at = ?
+         WHERE id = ?
+         RETURNING *",
+    )
+    .bind(store_id)
+    .bind(section_id)
+    .bind(index)
     .bind(now)
     .bind(id)
-    .fetch_optional(db)
-    .await
+    .fetch_one(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
+
+    Ok(Some(updated))
 }
 
 async fn organize_section(

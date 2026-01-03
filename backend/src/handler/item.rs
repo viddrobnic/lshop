@@ -183,18 +183,52 @@ pub async fn list(State(db): State<Db>, _: User) -> Result<Json<ItemList>, Probl
 }
 
 #[derive(Deserialize)]
-pub struct ItemUpdateReq {
+pub struct ItemRenameReq {
     name: String,
-    checked: bool,
 }
 
-pub async fn update(
+pub async fn rename(
     State(db): State<Db>,
     _: User,
     Path(id): Path<i64>,
-    Json(req): Json<ItemUpdateReq>,
+    Json(req): Json<ItemRenameReq>,
 ) -> Result<Json<Item>, Problem> {
-    let item = store::item::update(&db, id, &req.name, req.checked).await?;
+    let item = store::item::rename(&db, id, &req.name).await?;
+    let Some(item) = item else {
+        return Err(Problem::not_found());
+    };
+
+    Ok(Json(item))
+}
+
+pub async fn set_checked(
+    State(db): State<Db>,
+    _: User,
+    Path(id): Path<i64>,
+) -> Result<Json<Item>, Problem> {
+    let item = store::item::set_checked(&db, id).await?;
+    let Some(item) = item else {
+        return Err(Problem::not_found());
+    };
+
+    Ok(Json(item))
+}
+
+#[derive(Deserialize)]
+pub struct ItemMoveReq {
+    store_id: Option<i64>,
+    section_id: Option<i64>,
+    index: i64,
+}
+
+pub async fn move_item(
+    State(db): State<Db>,
+    _: User,
+    Path(id): Path<i64>,
+    Json(req): Json<ItemMoveReq>,
+) -> Result<Json<Item>, Problem> {
+    // Index in db starts at 1, api expects starting at 0
+    let item = store::item::move_item(&db, id, req.store_id, req.section_id, req.index + 1).await?;
     let Some(item) = item else {
         return Err(Problem::not_found());
     };

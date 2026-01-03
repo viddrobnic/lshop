@@ -42,7 +42,9 @@ fn create_app(state: AppState) -> Router {
                     "/items",
                     Router::new()
                         .route("/", get(item::list).post(item::create))
-                        .route("/{item_id}", put(item::update)),
+                        .route("/{item_id}/rename", put(item::rename))
+                        .route("/{item_id}/checked", put(item::set_checked))
+                        .route("/{item_id}/move", put(item::move_item)),
                 )
                 // Organize
                 .route("/stores/{store_id}/organize", post(organize::organize)),

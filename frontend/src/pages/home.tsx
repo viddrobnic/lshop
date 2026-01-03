@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/solid-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query";
 import { apiFetch } from "../api";
 import {
   createMemo,
@@ -128,6 +128,35 @@ export default function Home() {
       return undefined;
     }
   });
+
+  const queryClient = useQueryClient();
+  const moveMutation = useMutation(() => ({
+    mutationFn: async ({
+      id,
+      storeId,
+      sectionId,
+      index,
+    }: {
+      id: number;
+      storeId?: number;
+      sectionId?: number;
+      index: number;
+    }) =>
+      apiFetch(`/items/${id}/move`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          store_id: storeId,
+          section_id: sectionId,
+          index,
+        }),
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["items"],
+      });
+    },
+  }));
 
   // From here on out thre is a lot of drag and drop logic. Bare with it...
 
@@ -318,21 +347,17 @@ export default function Home() {
         const containerItems = containers[targetContainerId] || [];
         const targetIndex = containerItems.indexOf(Number(draggable.id));
 
-        console.log("Item DnD Result:", {
-          itemId: Number(draggable.id),
-          targetStoreId: storeId,
-          targetSectionId: sectionId,
-          targetIndex: targetIndex === -1 ? containerItems.length : targetIndex,
+        moveMutation.mutate({
+          id: Number(draggable.id),
+          storeId,
+          sectionId,
+          index: targetIndex === -1 ? containerItems.length : targetIndex,
         });
       }
     }
 
     setActiveItem(null);
-
-    // Reset to original data
-    // TODO: When mutation happens this probably won't be necessary, since successfull mutation will trigger rebuild (new data)
-    // But we might need to do it on error...
-    setContainers(buildContainers());
+    // Containers are rebuilt as part of memo when data is reloaded.
   };
 
   return (
@@ -373,18 +398,29 @@ export default function Home() {
                     <UnassignedSection
                       containerId={getContainerId(undefined, undefined)}
                       mode="global"
+                      disabled={moveMutation.isPending}
                     />
                   </Show>
 
                   {/* Stores */}
                   <For each={data.data!.stores}>
-                    {(store) => <StoreWithItems store={store} />}
+                    {(store) => (
+                      <StoreWithItems
+                        store={store}
+                        disabled={moveMutation.isPending}
+                      />
+                    )}
                   </For>
                 </div>
               </ItemsProvider>
               <DragOverlay class="z-50">
                 <Show when={activeItem()}>
-                  <SortableItem item={activeItem()!} inset={1} isOverlay />
+                  <SortableItem
+                    item={activeItem()!}
+                    inset={1}
+                    isOverlay
+                    disabled={moveMutation.isPending}
+                  />
                 </Show>{" "}
               </DragOverlay>
             </DragDropProvider>
@@ -398,6 +434,7 @@ export default function Home() {
 function UnassignedSection(props: {
   containerId: string;
   mode: "global" | "store";
+  disabled: boolean;
 }) {
   const { containers, itemMap } = useItemsContext();
   const droppable = createMemo(() => createDroppable(props.containerId));
@@ -450,6 +487,7 @@ function UnassignedSection(props: {
               <SortableItem
                 inset={props.mode === "global" ? 1 : 2}
                 item={item}
+                disabled={props.disabled}
               />
             </>
           )}
@@ -459,7 +497,7 @@ function UnassignedSection(props: {
   );
 }
 
-function StoreWithItems(props: { store: ItemListStore }) {
+function StoreWithItems(props: { store: ItemListStore; disabled: boolean }) {
   const { containers } = useItemsContext();
 
   // Calculate total from containers (current state during drag)
@@ -503,17 +541,23 @@ function StoreWithItems(props: { store: ItemListStore }) {
       <UnassignedSection
         containerId={getContainerId(props.store.id, undefined)}
         mode="store"
+        disabled={props.disabled}
       />
 
       {/* Store Sections */}
       <For each={props.store.sections}>
-        {(section) => <SectionWithItems section={section} />}
+        {(section) => (
+          <SectionWithItems section={section} disabled={props.disabled} />
+        )}
       </For>
     </>
   );
 }
 
-function SectionWithItems(props: { section: ItemListSection }) {
+function SectionWithItems(props: {
+  section: ItemListSection;
+  disabled: boolean;
+}) {
   const { containers, itemMap } = useItemsContext();
 
   const containerId = createMemo(() =>
@@ -557,7 +601,7 @@ function SectionWithItems(props: { section: ItemListSection }) {
           {(item) => (
             <>
               <div class="divider my-0 h-0" />
-              <SortableItem inset={2} item={item} />
+              <SortableItem inset={2} item={item} disabled={props.disabled} />
             </>
           )}
         </For>
