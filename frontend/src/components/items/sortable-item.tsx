@@ -7,6 +7,10 @@ import { useMutation, useQueryClient } from "@tanstack/solid-query";
 import { apiFetch } from "../../api";
 import { useItemCheckerContext } from "./item-checker";
 
+// Delay between item being checked and new state sent to the server.
+// During this time user can uncheck the item
+const ITEM_CHECKED_DELAY_MS = 1500;
+
 export default function SortableItem(props: {
   inset: number;
   item: Item;
@@ -52,7 +56,10 @@ export default function SortableItem(props: {
   const checked = () => isChecked(props.item.id);
   const onChecked = (checked: boolean) => {
     if (checked) {
-      const t = setTimeout(() => checkedMutation.mutate(true), 2000);
+      const t = setTimeout(
+        () => checkedMutation.mutate(true),
+        ITEM_CHECKED_DELAY_MS
+      );
       setChecked(props.item.id, t);
     } else {
       setUnchecked(props.item.id);
