@@ -35,7 +35,7 @@ function NavBar() {
 
   return (
     <nav class="navbar hidden bg-white shadow md:flex">
-      <div class="mx-auto flex w-full max-w-3xl items-center">
+      <div class="mx-auto flex w-full max-w-2xl items-center">
         <div class="flex-1">
           <a class="btn btn-ghost text-xl" href="/">
             LShop

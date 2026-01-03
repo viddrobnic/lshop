@@ -21,7 +21,12 @@ import {
   type ItemListStore,
   getTotal,
 } from "../data/items";
-import { CircleQuestionMarkIcon, PackageIcon, StoreIcon } from "lucide-solid";
+import {
+  CircleQuestionMarkIcon,
+  PackageIcon,
+  SparklesIcon,
+  StoreIcon,
+} from "lucide-solid";
 import { cn } from "../lib/utils";
 import AddItem from "../components/items/add-item";
 import {
@@ -409,7 +414,7 @@ function UnassignedSection(props: {
     <div ref={droppable().ref}>
       <div
         class={cn(
-          "sticky flex items-center gap-3 bg-white py-3 pr-3",
+          "sticky mb-px flex items-center gap-3 bg-white py-3 pr-3",
           props.mode === "global" ? "top-0 z-30" : "top-14 z-20",
           props.mode === "global" ? "pl-3" : "pl-7"
         )}
@@ -437,21 +442,15 @@ function UnassignedSection(props: {
         </div>
       </div>
 
-      <Show when={items().length > 0}>
-        <div class="divider my-0 h-0" />
-      </Show>
-
       <SortableProvider ids={itemIds()}>
         <For each={items()}>
-          {(item, idx) => (
+          {(item) => (
             <>
+              <div class="divider my-0 h-0" />
               <SortableItem
                 inset={props.mode === "global" ? 1 : 2}
                 item={item}
               />
-              <Show when={idx() < items().length - 1}>
-                <div class="divider my-0 h-0" />
-              </Show>
             </>
           )}
         </For>
@@ -491,7 +490,11 @@ function StoreWithItems(props: { store: ItemListStore }) {
         <div class="bg-secondary/10 text-secondary flex shrink-0 items-center justify-center rounded-md px-2 py-0.5 text-xs font-light">
           {total()}
         </div>
-        <div class="ml-auto">
+        <div class="ml-auto flex items-center gap-2">
+          <button class="btn btn-sm btn-ghost btn-secondary">
+            <SparklesIcon class="size-4" />
+            Sort
+          </button>
           <AddItem store_id={props.store.id} mode="store" />
         </div>
       </div>
@@ -529,7 +532,7 @@ function SectionWithItems(props: { section: ItemListSection }) {
   return (
     <div ref={droppable().ref}>
       {/* Section Header */}
-      <div class="sticky top-14 z-20 flex items-center gap-3 bg-white py-3 pr-3 pl-7">
+      <div class="sticky top-14 z-20 mb-px flex items-center gap-3 bg-white py-3 pr-3 pl-7">
         <div class="bg-primary/10 text-primary flex size-6 shrink-0 items-center justify-center rounded-md">
           <PackageIcon class="size-3.5" />
         </div>
@@ -548,19 +551,13 @@ function SectionWithItems(props: { section: ItemListSection }) {
         </div>
       </div>
 
-      <Show when={items().length > 0}>
-        <div class="divider my-0 h-0" />
-      </Show>
-
       {/* Section Items */}
       <SortableProvider ids={itemIds()}>
         <For each={items()}>
-          {(item, idx) => (
+          {(item) => (
             <>
+              <div class="divider my-0 h-0" />
               <SortableItem inset={2} item={item} />
-              <Show when={idx() < items().length - 1}>
-                <div class="divider my-0 h-0" />
-              </Show>
             </>
           )}
         </For>

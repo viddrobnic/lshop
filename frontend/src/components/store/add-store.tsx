@@ -15,8 +15,8 @@ export default function AddStoreDialog() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stores"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["stores"] });
       setOpen(false);
     },
   }));

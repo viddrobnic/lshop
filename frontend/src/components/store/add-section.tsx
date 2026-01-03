@@ -15,8 +15,8 @@ export default function AddSectionDialog(props: { storeId: number }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
         queryKey: ["stores", "sections", props.storeId],
       });
       setOpen(false);

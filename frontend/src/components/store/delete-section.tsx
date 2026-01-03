@@ -17,8 +17,8 @@ export default function DeleteSectionDialog(props: {
       apiFetch(`/sections/${props.id()}`, {
         method: "DELETE",
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
         queryKey: ["stores", "sections", props.storeId()],
       });
       props.setOpen(false);

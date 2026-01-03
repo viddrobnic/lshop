@@ -22,8 +22,8 @@ export default function EditStoreDialog(props: {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stores"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["stores"] });
       props.setStore("open", false);
     },
   }));

@@ -202,8 +202,8 @@ function SectionList(props: { storeId: number; sections: Section[] }) {
         onMutateResult?.previousSections
       );
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
         queryKey: ["stores", "sections", props.storeId],
       });
     },

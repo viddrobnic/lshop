@@ -20,8 +20,8 @@ export default function DeleteStoreDialog(props: {
       apiFetch(`/stores/${props.store.id}`, {
         method: "DELETE",
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stores"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["stores"] });
       props.setStore("open", false);
     },
   }));

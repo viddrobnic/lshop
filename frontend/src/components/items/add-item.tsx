@@ -26,22 +26,11 @@ export default function AddItem(props: AddItemProps) {
           section_id: props.section_id,
         }),
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["items"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["items"] });
       setOpen(false);
     },
   }));
-
-  const buttonClass = () => {
-    switch (props.mode) {
-      case "global":
-        return "btn btn-secondary btn-circle btn-lg";
-      case "store":
-        return "btn btn-secondary btn-ghost btn-sm";
-      case "section":
-        return "btn btn-primary btn-ghost btn-sm";
-    }
-  };
 
   return (
     <ModifyDialog
@@ -54,7 +43,10 @@ export default function AddItem(props: AddItemProps) {
       <Switch>
         <Match when={props.mode === "global"}>
           <div class="fab bottom-20 sm:bottom-4">
-            <button class={buttonClass()} onClick={() => setOpen(true)}>
+            <button
+              class="btn btn-secondary btn-circle btn-lg"
+              onClick={() => setOpen(true)}
+            >
               <PlusIcon />
             </button>
           </div>
@@ -63,13 +55,12 @@ export default function AddItem(props: AddItemProps) {
         <Match when={props.mode === "store" || props.mode === "section"}>
           <button
             class={cn(
-              "btn btn-ghost btn-sm",
+              "btn btn-soft btn-sm btn-circle",
               props.mode === "store" ? "btn-secondary" : "btn-primary"
             )}
             onClick={() => setOpen(true)}
           >
-            <PlusIcon class="mr-1 size-4" />
-            Add
+            <PlusIcon class="size-4" />
           </button>
         </Match>
       </Switch>

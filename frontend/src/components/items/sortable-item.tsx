@@ -40,8 +40,8 @@ export default function SortableItem(props: {
           checked,
         }),
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
         queryKey: ["items"],
       });
     },
@@ -98,7 +98,7 @@ export default function SortableItem(props: {
 
       <div
         {...(sortable()?.dragActivators || {})}
-        class="flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded text-neutral-500 select-none"
+        class="flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded pr-1 text-neutral-500 select-none"
       >
         <GripVerticalIcon class="size-4" />
       </div>
