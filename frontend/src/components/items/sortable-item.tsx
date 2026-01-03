@@ -45,6 +45,9 @@ export default function SortableItem(props: {
         queryKey: ["items"],
       });
     },
+    onError: () => {
+      setUnchecked(props.item.id);
+    },
   }));
 
   const { isChecked, setChecked, setUnchecked } = useItemCheckerContext();
