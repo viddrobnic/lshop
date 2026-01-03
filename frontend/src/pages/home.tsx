@@ -515,6 +515,17 @@ function StoreWithItems(props: { store: ItemListStore; disabled: boolean }) {
     return count;
   });
 
+  const queryClient = useQueryClient();
+  const sortMutation = useMutation(() => ({
+    mutationFn: async () =>
+      apiFetch(`/stores/${props.store.id}/organize`, {
+        method: "POST",
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["items"] });
+    },
+  }));
+
   return (
     <>
       {/* Store Header */}
@@ -529,9 +540,19 @@ function StoreWithItems(props: { store: ItemListStore; disabled: boolean }) {
           {total()}
         </div>
         <div class="ml-auto flex items-center gap-2">
-          <button class="btn btn-sm btn-ghost btn-secondary">
-            <SparklesIcon class="size-4" />
-            Sort
+          <button
+            class="btn btn-sm btn-ghost btn-secondary"
+            onClick={() => sortMutation.mutate()}
+          >
+            {sortMutation.isPending ? (
+              <>
+                <span class="loading loading-spinner" /> Sorting
+              </>
+            ) : (
+              <>
+                <SparklesIcon class="size-4" /> Sort
+              </>
+            )}
           </button>
           <AddItem store_id={props.store.id} mode="store" />
         </div>
@@ -541,13 +562,16 @@ function StoreWithItems(props: { store: ItemListStore; disabled: boolean }) {
       <UnassignedSection
         containerId={getContainerId(props.store.id, undefined)}
         mode="store"
-        disabled={props.disabled}
+        disabled={props.disabled || sortMutation.isPending}
       />
 
       {/* Store Sections */}
       <For each={props.store.sections}>
         {(section) => (
-          <SectionWithItems section={section} disabled={props.disabled} />
+          <SectionWithItems
+            section={section}
+            disabled={props.disabled || sortMutation.isPending}
+          />
         )}
       </For>
     </>

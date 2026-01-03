@@ -69,6 +69,10 @@ pub async fn organize(
         store::section::list(&state.db, store_id),
     )?;
 
+    if items.is_empty() || sections.is_empty() {
+        return Ok(StatusCode::NO_CONTENT);
+    }
+
     let valid_item_ids: HashSet<_> = items.iter().map(|sec| sec.id).collect();
     let valid_section_ids: HashSet<_> = sections.iter().map(|sec| sec.id).collect();
 
