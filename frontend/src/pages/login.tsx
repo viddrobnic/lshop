@@ -65,6 +65,10 @@ export default function Login() {
                 name="username"
                 placeholder="Enter username"
                 class="input input-bordered"
+                autocomplete="username"
+                autocapitalize="none"
+                autocorrect="off"
+                spellcheck="false"
                 required
               />
             </div>
