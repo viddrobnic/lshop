@@ -368,7 +368,6 @@ export default function Home() {
       <Show when={total() !== undefined}>
         <div class="px-4 text-sm">{total()} total items</div>
       </Show>
-      <AddItem mode="global" />
 
       <ItemsCheckerProvider>
         <Switch>
@@ -394,13 +393,11 @@ export default function Home() {
               <ItemsProvider containers={containers} itemMap={itemMap}>
                 <div class="pt-4 pb-14 sm:pb-4">
                   {/* Global Unassigned Section */}
-                  <Show when={data.data!.unassigned.length > 0}>
-                    <UnassignedSection
-                      containerId={getContainerId(undefined, undefined)}
-                      mode="global"
-                      disabled={moveMutation.isPending}
-                    />
-                  </Show>
+                  <UnassignedSection
+                    containerId={getContainerId(undefined, undefined)}
+                    mode="global"
+                    disabled={moveMutation.isPending}
+                  />
 
                   {/* Stores */}
                   <For each={data.data!.stores}>
@@ -477,6 +474,12 @@ function UnassignedSection(props: {
         <div class="flex shrink-0 items-center justify-center rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-light text-neutral-500">
           {items().length}
         </div>
+
+        <Show when={props.mode === "global"}>
+          <div class="ml-auto">
+            <AddItem mode="global" />
+          </div>
+        </Show>
       </div>
 
       <SortableProvider ids={itemIds()}>
