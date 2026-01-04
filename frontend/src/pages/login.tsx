@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/solid-query";
 import { apiFetch, UnauthorizedError } from "../api";
 import { useNavigate } from "@solidjs/router";
 import { CircleAlertIcon } from "lucide-solid";
+import { showErrorToast } from "../components/toast/error-toast";
 
 export default function Login() {
   const queryClient = useQueryClient();
@@ -30,6 +31,7 @@ export default function Login() {
       });
       navigate("/");
     },
+    onError: () => showErrorToast("Failed to log in"),
   }));
 
   const handleSubmit = (e: SubmitEvent) => {

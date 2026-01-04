@@ -29,6 +29,7 @@ import {
 } from "lucide-solid";
 import { cn } from "../lib/utils";
 import AddItem from "../components/items/add-item";
+import { showErrorToast } from "../components/toast/error-toast";
 import {
   DragDropProvider,
   DragDropSensors,
@@ -156,9 +157,13 @@ export default function Home() {
         queryKey: ["items"],
       });
     },
+    onError: () => {
+      setContainers(buildContainers());
+      showErrorToast("Failed to move item");
+    },
   }));
 
-  // From here on out thre is a lot of drag and drop logic. Bare with it...
+  // From here on out there is a lot of drag and drop logic. Bare with it...
 
   // Build containers map: containerId -> item IDs
   const buildContainers = () => {
@@ -527,6 +532,7 @@ function StoreWithItems(props: { store: ItemListStore; disabled: boolean }) {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["items"] });
     },
+    onError: () => showErrorToast("Failed to sort items"),
   }));
 
   return (

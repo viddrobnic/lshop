@@ -4,6 +4,7 @@ import { For } from "solid-js";
 import { useAuth } from "../providers/auth";
 import { useMutation, useQueryClient } from "@tanstack/solid-query";
 import { apiFetch } from "../api";
+import { showErrorToast } from "./toast/error-toast";
 
 const navItems = [
   { href: "/", label: "Items", Icon: ListIcon },
@@ -26,6 +27,7 @@ function useLogoutMutation() {
       });
       navigate("/login");
     },
+    onError: () => showErrorToast("Failed to log out"),
   }));
 }
 

@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/solid-query";
 import { apiFetch } from "../../api";
 import DeleteDialog from "../delete-dialog";
 import { Accessor, Setter } from "solid-js";
+import { showErrorToast } from "../toast/error-toast";
 
 export default function DeleteSectionDialog(props: {
   id: Accessor<number>;
@@ -23,6 +24,7 @@ export default function DeleteSectionDialog(props: {
       });
       props.setOpen(false);
     },
+    onError: () => showErrorToast("Failed to delete section"),
   }));
 
   return (

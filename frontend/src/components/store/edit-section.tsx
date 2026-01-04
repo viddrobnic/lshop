@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/solid-query";
 import { apiFetch } from "../../api";
 import ModifyDialog from "../modify-dialog";
 import { Accessor, Setter } from "solid-js";
+import { showErrorToast } from "../toast/error-toast";
 
 export default function EditSectionDialog(props: {
   id: Accessor<number>;
@@ -25,6 +26,7 @@ export default function EditSectionDialog(props: {
       });
       props.setOpen(false);
     },
+    onError: () => showErrorToast("Failed to rename section"),
   }));
 
   return (

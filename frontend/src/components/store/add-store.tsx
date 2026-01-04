@@ -3,6 +3,7 @@ import { createSignal } from "solid-js";
 import { apiFetch } from "../../api";
 import { PlusIcon } from "lucide-solid";
 import ModifyDialog from "../modify-dialog";
+import { showErrorToast } from "../toast/error-toast";
 
 export default function AddStoreDialog() {
   const [open, setOpen] = createSignal(false);
@@ -19,6 +20,7 @@ export default function AddStoreDialog() {
       await queryClient.invalidateQueries({ queryKey: ["stores"] });
       setOpen(false);
     },
+    onError: () => showErrorToast("Failed to add store"),
   }));
 
   return (

@@ -4,6 +4,7 @@ import { apiFetch } from "../../api";
 import { PlusIcon } from "lucide-solid";
 import ModifyDialog from "../modify-dialog";
 import { cn } from "../../lib/utils";
+import { showErrorToast } from "../toast/error-toast";
 
 interface AddItemProps {
   store_id?: number;
@@ -30,6 +31,7 @@ export default function AddItem(props: AddItemProps) {
       await queryClient.invalidateQueries({ queryKey: ["items"] });
       setOpen(false);
     },
+    onError: () => showErrorToast("Failed to add item"),
   }));
 
   const colorClass = (): string => {

@@ -6,6 +6,7 @@ import { GripVerticalIcon } from "lucide-solid";
 import { useMutation, useQueryClient } from "@tanstack/solid-query";
 import { apiFetch } from "../../api";
 import { useItemCheckerContext } from "./item-checker";
+import { showErrorToast } from "../toast/error-toast";
 
 // Delay between item being checked and new state sent to the server.
 // During this time user can uncheck the item
@@ -47,6 +48,7 @@ export default function SortableItem(props: {
     },
     onError: () => {
       setUnchecked(props.item.id);
+      showErrorToast("Failed to mark item as checked");
     },
   }));
 

@@ -53,5 +53,5 @@ The following endpoints have to be implemented
 
 ## Improvements:
 
-- On move use offset to get item at target index, and use it's ord. this should make it robust towards holes.
-- Error handling
+- [ ] On move use offset to get item at target index, and use it's ord. this should make it robust towards holes.
+- [x] Error handling

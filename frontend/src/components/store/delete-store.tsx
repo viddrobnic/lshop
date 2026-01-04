@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/solid-query";
 import { apiFetch } from "../../api";
 import { SetStoreFunction } from "solid-js/store";
 import DeleteDialog from "../delete-dialog";
+import { showErrorToast } from "../toast/error-toast";
 
 type DeleteData = {
   id: number;
@@ -24,6 +25,7 @@ export default function DeleteStoreDialog(props: {
       await queryClient.invalidateQueries({ queryKey: ["stores"] });
       props.setStore("open", false);
     },
+    onError: () => showErrorToast("Failed to delete store"),
   }));
 
   return (

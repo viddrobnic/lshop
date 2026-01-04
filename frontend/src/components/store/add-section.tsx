@@ -3,6 +3,7 @@ import { createSignal } from "solid-js";
 import { apiFetch } from "../../api";
 import { PlusIcon } from "lucide-solid";
 import ModifyDialog from "../modify-dialog";
+import { showErrorToast } from "../toast/error-toast";
 
 export default function AddSectionDialog(props: { storeId: number }) {
   const [open, setOpen] = createSignal(false);
@@ -21,6 +22,7 @@ export default function AddSectionDialog(props: { storeId: number }) {
       });
       setOpen(false);
     },
+    onError: () => showErrorToast("Failed to add section"),
   }));
 
   return (

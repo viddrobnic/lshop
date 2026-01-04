@@ -27,6 +27,7 @@ import {
   useDragDropContext,
 } from "@thisbeyond/solid-dnd";
 import { cn } from "../../lib/utils";
+import { showErrorToast } from "../toast/error-toast";
 
 export default function StoreItem(props: {
   store: Store;
@@ -201,6 +202,7 @@ function SectionList(props: { storeId: number; sections: Section[] }) {
         ["stores", "sections", props.storeId],
         onMutateResult?.previousSections
       );
+      showErrorToast("Failed to reorder sections");
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({

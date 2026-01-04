@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/solid-query";
 import { apiFetch } from "../../api";
 import { SetStoreFunction } from "solid-js/store";
 import ModifyDialog from "../modify-dialog";
+import { showErrorToast } from "../toast/error-toast";
 
 type EditData = {
   id: number;
@@ -26,6 +27,7 @@ export default function EditStoreDialog(props: {
       await queryClient.invalidateQueries({ queryKey: ["stores"] });
       props.setStore("open", false);
     },
+    onError: () => showErrorToast("Failed to rename store"),
   }));
 
   return (
