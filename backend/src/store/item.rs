@@ -164,6 +164,10 @@ pub async fn move_item(
         return Ok(None);
     };
 
+    // Get target order before performing other ops
+    let target_ord = get_target_ord(&mut tx, store_id, section_id, index).await?;
+
+    // Move items in current section to close the created gap.
     sqlx::query(
         "UPDATE items 
          SET ord = ord - 1, updated_at = ?
@@ -179,6 +183,7 @@ pub async fn move_item(
     .execute(&mut *tx)
     .await?;
 
+    // Move items in target section to open the gap
     sqlx::query(
         "UPDATE items 
          SET ord = ord + 1, updated_at = ?
@@ -190,10 +195,11 @@ pub async fn move_item(
     .bind(now)
     .bind(store_id)
     .bind(section_id)
-    .bind(index)
+    .bind(target_ord)
     .execute(&mut *tx)
     .await?;
 
+    // Update the item
     let updated = sqlx::query_as(
         "UPDATE items
          SET store_id = ?, section_id = ?, ord = ?, updated_at = ?
@@ -202,7 +208,7 @@ pub async fn move_item(
     )
     .bind(store_id)
     .bind(section_id)
-    .bind(index)
+    .bind(target_ord)
     .bind(now)
     .bind(id)
     .fetch_one(&mut *tx)
@@ -211,6 +217,37 @@ pub async fn move_item(
     tx.commit().await?;
 
     Ok(Some(updated))
+}
+
+// Helper function for getting ord of the item at given index
+async fn get_target_ord(
+    tx: &mut sqlx::SqliteTransaction<'_>,
+    store_id: Option<i64>,
+    section_id: Option<i64>,
+    index: i64,
+) -> Result<i64, sqlx::Error> {
+    let target_ord: Option<i64> = sqlx::query(
+        "SELECT ord FROM items 
+         WHERE store_id IS ? 
+           AND section_id IS ? 
+           AND checked = FALSE 
+         ORDER BY ord ASC 
+         LIMIT 1 OFFSET ?",
+    )
+    .bind(store_id)
+    .bind(section_id)
+    .bind(index)
+    .fetch_optional(&mut **tx)
+    .await?
+    .map(|row| row.get(0));
+
+    if let Some(ord) = target_ord {
+        return Ok(ord);
+    }
+
+    // No such item exists, return max ord + 1
+    let ord = max_ord(&mut **tx, store_id, section_id).await?;
+    Ok(ord + 1)
 }
 
 async fn organize_section(
@@ -253,7 +290,7 @@ async fn max_ord<'c, E: Executor<'c, Database = Sqlite>>(
     section_id: Option<i64>,
 ) -> Result<i64, sqlx::Error> {
     let curr_ord: i64 = sqlx::query(
-        "SELECT MAX(ord) FROM items 
+        "SELECT COALESCE(MAX(ord), 0) FROM items 
          WHERE store_id IS ? 
            AND section_id IS ? 
            AND checked = FALSE",

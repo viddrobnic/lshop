@@ -227,8 +227,7 @@ pub async fn move_item(
     Path(id): Path<i64>,
     Json(req): Json<ItemMoveReq>,
 ) -> Result<Json<Item>, Problem> {
-    // Index in db starts at 1, api expects starting at 0
-    let item = store::item::move_item(&db, id, req.store_id, req.section_id, req.index + 1).await?;
+    let item = store::item::move_item(&db, id, req.store_id, req.section_id, req.index).await?;
     let Some(item) = item else {
         return Err(Problem::not_found());
     };

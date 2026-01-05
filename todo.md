@@ -50,8 +50,3 @@ The following endpoints have to be implemented
 - [x] organize -> run llm to organize through sections
 - [ ] update ordering index when section or store is deleted and items are moved to unassigned
 - [ ] list archived (checked) -> only order by updated at desc
-
-## Improvements:
-
-- [ ] On move use offset to get item at target index, and use it's ord. this should make it robust towards holes.
-- [x] Error handling
