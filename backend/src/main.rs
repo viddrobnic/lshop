@@ -29,7 +29,10 @@ enum Command {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    dotenvy::dotenv()?;
+    // Ignore the error on purpose.
+    // We don't want to crash the program because of ie missing .env file.
+    let _ = dotenvy::dotenv();
+
     let cli = Cli::parse();
 
     let conf = Config::new()?;
