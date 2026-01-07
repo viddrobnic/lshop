@@ -91,7 +91,22 @@ shop.example.com {
         header Cache-Control "public, max-age=31536000, immutable"
     }
 
+    handle /manifest.json {
+        file_server
+        header Cache-Control "public, max-age=3600"  # 1 hour
+    }
+
+    @icons {
+        path /apple-touch-icon.png /favicon* /icon*
+    }
+
+    handle @icons {
+        file_server
+        header Cache-Control "public, max-age=604800"  # 1 week
+    }
+
     handle {
+        header /index.html Cache-Control "no-cache"
         try_files {path} /index.html
         file_server
     }
