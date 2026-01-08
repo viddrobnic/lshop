@@ -24,11 +24,11 @@ import {
 import {
   CircleQuestionMarkIcon,
   PackageIcon,
+  PlusIcon,
   SparklesIcon,
   StoreIcon,
 } from "lucide-solid";
 import { cn } from "../lib/utils";
-import AddItem from "../components/items/add-item";
 import { showErrorToast } from "../components/toast/error-toast";
 import {
   DragDropProvider,
@@ -46,6 +46,7 @@ import {
 import { createStore } from "solid-js/store";
 import SortableItem from "../components/items/sortable-item";
 import { ItemsCheckerProvider } from "../components/items/item-checker";
+import { AddItemProvider, useAddItem } from "../components/items/add-item";
 
 // Context for containers and itemMap
 type ItemsContextValue = {
@@ -374,61 +375,63 @@ export default function Home() {
         <div class="px-4 text-sm">{total()} total items</div>
       </Show>
 
-      <ItemsCheckerProvider>
-        <Switch>
-          <Match when={data.isPending}>
-            <div class="px-4 pt-4 text-sm text-neutral-600">
-              <span class="loading loading-spinner loading-sm mr-3" />
-              Loading...
-            </div>
-          </Match>
+      <AddItemProvider>
+        <ItemsCheckerProvider>
+          <Switch>
+            <Match when={data.isPending}>
+              <div class="px-4 pt-4 text-sm text-neutral-600">
+                <span class="loading loading-spinner loading-sm mr-3" />
+                Loading...
+              </div>
+            </Match>
 
-          <Match when={data.isError}>
-            <div class="px-4 pt-4">Error: {data.error?.message}</div>
-          </Match>
+            <Match when={data.isError}>
+              <div class="px-4 pt-4">Error: {data.error?.message}</div>
+            </Match>
 
-          <Match when={!!data.data}>
-            <DragDropProvider
-              onDragStart={onDragStart}
-              onDragOver={onDragOver}
-              onDragEnd={onDragEnd}
-              collisionDetector={closestContainerOrItem}
-            >
-              <DragDropSensors />
-              <ItemsProvider containers={containers} itemMap={itemMap}>
-                <div class="pt-4 pb-14 sm:pb-4">
-                  {/* Global Unassigned Section */}
-                  <UnassignedSection
-                    containerId={getContainerId(undefined, undefined)}
-                    mode="global"
-                    disabled={moveMutation.isPending}
-                  />
+            <Match when={!!data.data}>
+              <DragDropProvider
+                onDragStart={onDragStart}
+                onDragOver={onDragOver}
+                onDragEnd={onDragEnd}
+                collisionDetector={closestContainerOrItem}
+              >
+                <DragDropSensors />
+                <ItemsProvider containers={containers} itemMap={itemMap}>
+                  <div class="pt-4 pb-14 sm:pb-4">
+                    {/* Global Unassigned Section */}
+                    <UnassignedSection
+                      containerId={getContainerId(undefined, undefined)}
+                      mode="global"
+                      disabled={moveMutation.isPending}
+                    />
 
-                  {/* Stores */}
-                  <For each={data.data!.stores}>
-                    {(store) => (
-                      <StoreWithItems
-                        store={store}
-                        disabled={moveMutation.isPending}
-                      />
-                    )}
-                  </For>
-                </div>
-              </ItemsProvider>
-              <DragOverlay class="z-50">
-                <Show when={activeItem()}>
-                  <SortableItem
-                    item={activeItem()!}
-                    inset={1}
-                    isOverlay
-                    disabled={moveMutation.isPending}
-                  />
-                </Show>{" "}
-              </DragOverlay>
-            </DragDropProvider>
-          </Match>
-        </Switch>
-      </ItemsCheckerProvider>
+                    {/* Stores */}
+                    <For each={data.data!.stores}>
+                      {(store) => (
+                        <StoreWithItems
+                          store={store}
+                          disabled={moveMutation.isPending}
+                        />
+                      )}
+                    </For>
+                  </div>
+                </ItemsProvider>
+                <DragOverlay class="z-50">
+                  <Show when={activeItem()}>
+                    <SortableItem
+                      item={activeItem()!}
+                      inset={1}
+                      isOverlay
+                      disabled={moveMutation.isPending}
+                    />
+                  </Show>{" "}
+                </DragOverlay>
+              </DragDropProvider>
+            </Match>
+          </Switch>
+        </ItemsCheckerProvider>
+      </AddItemProvider>
     </>
   );
 }
@@ -438,6 +441,8 @@ function UnassignedSection(props: {
   mode: "global" | "store";
   disabled: boolean;
 }) {
+  const { setOpen } = useAddItem();
+
   const { containers, itemMap } = useItemsContext();
   const droppable = createMemo(() => createDroppable(props.containerId));
 
@@ -481,9 +486,12 @@ function UnassignedSection(props: {
         </div>
 
         <Show when={props.mode === "global"}>
-          <div class="ml-auto">
-            <AddItem mode="global" />
-          </div>
+          <button
+            class="btn btn-soft btn-sm btn-neutral btn-circle ml-auto"
+            onClick={() => setOpen({})}
+          >
+            <PlusIcon class="size-4" />
+          </button>
         </Show>
       </div>
 
@@ -506,6 +514,7 @@ function UnassignedSection(props: {
 }
 
 function StoreWithItems(props: { store: ItemListStore; disabled: boolean }) {
+  const { setOpen } = useAddItem();
   const { containers } = useItemsContext();
 
   // Calculate total from containers (current state during drag)
@@ -563,7 +572,13 @@ function StoreWithItems(props: { store: ItemListStore; disabled: boolean }) {
               </>
             )}
           </button>
-          <AddItem store_id={props.store.id} mode="store" />
+
+          <button
+            class="btn btn-soft btn-sm btn-secondary btn-circle"
+            onClick={() => setOpen({ store_id: props.store.id })}
+          >
+            <PlusIcon class="size-4" />
+          </button>
         </div>
       </div>
 
@@ -591,6 +606,8 @@ function SectionWithItems(props: {
   section: ItemListSection;
   disabled: boolean;
 }) {
+  const { setOpen } = useAddItem();
+
   const { containers, itemMap } = useItemsContext();
 
   const containerId = createMemo(() =>
@@ -619,13 +636,17 @@ function SectionWithItems(props: {
         <div class="bg-primary/10 text-primary flex shrink-0 items-center justify-center rounded-md px-2 py-0.5 text-xs font-light">
           {items().length}
         </div>
-        <div class="ml-auto">
-          <AddItem
-            store_id={props.section.store_id}
-            section_id={props.section.id}
-            mode="section"
-          />
-        </div>
+        <button
+          class="btn btn-soft btn-sm btn-primary btn-circle ml-auto"
+          onClick={() =>
+            setOpen({
+              store_id: props.section.store_id,
+              section_id: props.section.id,
+            })
+          }
+        >
+          <PlusIcon class="size-4" />
+        </button>
       </div>
 
       {/* Section Items */}
