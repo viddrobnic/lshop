@@ -97,7 +97,8 @@ pub async fn login(
         // Safari doesn't save secure cookies on localhost...
         .secure(state.config.environment.is_prod())
         .http_only(true)
-        .same_site(SameSite::Lax);
+        .same_site(SameSite::Lax)
+        .expires(session.expires_at);
 
     Ok((jar.add(cookie), Json(session)))
 }
