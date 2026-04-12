@@ -27,7 +27,7 @@ I currently don't provide any setup scripts, but this app should be quite easy t
 ### Requirements:
 
 - For building backend you need rust
-- For building frontend you need bun
+- For building frontend you need Node.js and npm
 
 ### Build
 
@@ -39,9 +39,11 @@ I currently don't provide any setup scripts, but this app should be quite easy t
 2. Build frontend
    ```sh
    cd frontend
-   bun install
-   bun run build
+   npm install --legacy-peer-deps
+   npm run build
    ```
+
+The frontend currently needs `--legacy-peer-deps` during install because of upstream peer dependency conflicts in the toolchain.
 
 ### Configure Backend
 
