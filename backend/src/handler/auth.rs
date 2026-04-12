@@ -129,7 +129,7 @@ async fn create_session(db: &Db, user_id: i64) -> Result<Session, sqlx::Error> {
 
     let sess_str = BASE64_URL_SAFE_NO_PAD.encode(sess_bytes);
     let sess_hash = to_hex(&Sha256::digest(sess_bytes)[..]);
-    let expires_at = time::OffsetDateTime::now_utc() + time::Duration::days(30);
+    let expires_at = time::OffsetDateTime::now_utc() + time::Duration::days(365);
 
     store::user::create_session(db, user_id, &sess_hash, expires_at).await?;
 

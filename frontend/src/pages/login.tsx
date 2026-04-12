@@ -19,9 +19,9 @@ export default function Login() {
         });
       } catch (error) {
         if (error instanceof UnauthorizedError) {
-          throw new Error("Invalid credentials");
+          throw new Error("Invalid credentials", { cause: error });
         }
-        throw new Error("An unknown error occurred");
+        throw new Error("An unknown error occurred", { cause: error });
       }
     },
     onSuccess: async () => {

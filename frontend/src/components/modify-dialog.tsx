@@ -48,7 +48,9 @@ export default function ModifyDialog(props: ModifyDialogProps) {
 
       <Portal>
         <dialog
-          ref={dialogRef}
+          ref={(el) => {
+            dialogRef = el;
+          }}
           class="modal modal-bottom sm:modal-middle"
           onClose={() => props.setOpen(false)}
         >
@@ -61,10 +63,17 @@ export default function ModifyDialog(props: ModifyDialogProps) {
             </button>
             <h3 class="text-lg font-bold">{props.title}</h3>
 
-            <form onSubmit={handleSubmit} ref={formRef}>
+            <form
+              onSubmit={handleSubmit}
+              ref={(el) => {
+                formRef = el;
+              }}
+            >
               <div class="py-4">
                 <input
-                  ref={inputRef}
+                  ref={(el) => {
+                    inputRef = el;
+                  }}
                   name="name"
                   type="text"
                   placeholder="Name"

@@ -124,7 +124,9 @@ function Dialog() {
   return (
     <Portal>
       <dialog
-        ref={dialogRef}
+        ref={(el) => {
+          dialogRef = el;
+        }}
         class="modal modal-bottom sm:modal-middle"
         onClose={() => setClosed()}
       >
@@ -142,11 +144,15 @@ function Dialog() {
               e.preventDefault();
               handleSubmit(true);
             }}
-            ref={formRef}
+            ref={(el) => {
+              formRef = el;
+            }}
           >
             <div class="py-4">
               <input
-                ref={inputRef}
+                ref={(el) => {
+                  inputRef = el;
+                }}
                 name="name"
                 type="text"
                 placeholder="Name"

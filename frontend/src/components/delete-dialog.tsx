@@ -28,7 +28,9 @@ export default function DeleteDialog(props: DeleteDialogProps) {
   return (
     <Portal>
       <dialog
-        ref={dialogRef}
+        ref={(el) => {
+          dialogRef = el;
+        }}
         class="modal modal-bottom sm:modal-middle"
         onClose={() => props.setOpen(false)}
       >
