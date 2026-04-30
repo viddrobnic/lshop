@@ -46,19 +46,26 @@
         };
 
         backend = import ./nix/backend.nix args;
+        frontend = import ./nix/frontend.nix args;
       in
       {
         packages = {
           backend = backend.package;
+          frontend = frontend.package;
         };
 
         checks = {
           backend = backend.package;
+          frontend = frontend.package;
         }
         // pkgs.lib.mapAttrs' (name: value: {
           name = "backend-${name}";
           value = value;
-        }) backend.checks;
+        }) backend.checks
+        // pkgs.lib.mapAttrs' (name: value: {
+          name = "frontend-${name}";
+          value = value;
+        }) frontend.checks;
 
         devShells.default = craneLib.devShell {
           checks = backend.checks;

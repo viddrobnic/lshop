@@ -26,11 +26,11 @@ in
     );
 
     # Check formatting
-    better-api-fmt = craneLib.cargoFmt {
+    fmt = craneLib.cargoFmt {
       inherit src;
     };
 
-    better-api-toml-fmt = craneLib.taploFmt {
+    toml-fmt = craneLib.taploFmt {
       src = pkgs.lib.sources.sourceFilesBySuffices src [ ".toml" ];
     };
   };
