@@ -11,9 +11,9 @@ tower = { version = "0.4" }
 tower-http = { version = "0.6", features = ["trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = [
-    "fmt",
-    "json",
-    "env-filter",
+  "fmt",
+  "json",
+  "env-filter",
 ] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -23,11 +23,11 @@ anyhow = "1"
 thiserror = "2"
 time = { version = "0.3", features = ["serde"] }
 sqlx = { version = "0.8", features = [
-    "runtime-tokio",
-    "sqlite",
-    "derive",
-    "migrate",
-    "time",
+  "runtime-tokio",
+  "sqlite",
+  "derive",
+  "migrate",
+  "time",
 ] }
 clap = { version = "4.5", features = ["derive"] }
 dialoguer = { version = "0.12", features = ["password"] }

@@ -27,7 +27,7 @@
     "globals": "^17.5.0",
     "postcss": "^8.4.49",
     "prettier": "^3.7.4",
-    "prettier-plugin-tailwindcss": "^0.7.2",
+    "prettier-plugin-tailwindcss": "^0.8.0",
     "solid-devtools": "^0.34.4",
     "tailwindcss": "^4.1.18",
     "typescript": "^6.0.2",
