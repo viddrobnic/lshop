@@ -1,6 +1,14 @@
 { pkgs, craneLib, ... }:
 let
-  src = craneLib.cleanCargoSource ../backend;
+  inherit (pkgs) lib;
+
+  src = lib.fileset.toSource {
+    root = ../backend;
+    fileset = lib.fileset.unions [
+      (craneLib.fileset.commonCargoSources ../backend)
+      ../backend/migrations
+    ];
+  };
 
   commonArgs = {
     inherit src;
