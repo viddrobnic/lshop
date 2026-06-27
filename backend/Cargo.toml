@@ -36,4 +36,4 @@ argon2 = { version = "0.5", features = ["std"] }
 rand = "0.9"
 base64 = "0.22"
 sha2 = "0.10"
-async-openai = { version = "0.32", features = ["responses"] }
+async-openai = { version = "0.41", features = ["responses"] }

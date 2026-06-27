@@ -81,7 +81,7 @@ pub async fn organize(
         .map_err(|err| {
             tracing::error!(
                 error = err.to_string(),
-                "error during ai categorization: {err}"
+                "error during ai categorization: {err:?}"
             );
             Problem::internal()
         })?;
@@ -176,7 +176,7 @@ async fn openai_organize(
         .text(ResponseFormatJsonSchema {
             description: Some("Mapping of items to sections".to_string()),
             name: "categorization".to_string(),
-            schema: Some(schema),
+            schema,
             strict: Some(true),
         })
         .input(prompt)
