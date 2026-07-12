@@ -1,35 +1,63 @@
 import js from "@eslint/js";
-import tseslint from "@typescript-eslint/eslint-plugin";
-import tsparser from "@typescript-eslint/parser";
-import solid from "eslint-plugin-solid/configs/typescript";
+import tseslint from "typescript-eslint";
 import globals from "globals";
 import tanstackQuery from "@tanstack/eslint-plugin-query";
+import react from "eslint-plugin-react";
+import reactHooks from "eslint-plugin-react-hooks";
+import reactRefresh from "eslint-plugin-react-refresh";
 
-export default [
+export default tseslint.config(
+  {
+    ignores: [
+      "dist/**",
+      "node_modules/**",
+      "playwright-report/**",
+      "test-results/**",
+    ],
+  },
   js.configs.recommended,
+  ...tseslint.configs.strictTypeChecked,
+  react.configs.flat.recommended,
+  react.configs.flat["jsx-runtime"],
   ...tanstackQuery.configs["flat/recommended"],
   {
     files: ["**/*.{ts,tsx}"],
     plugins: {
-      "@typescript-eslint": tseslint,
-      solid: solid.plugins.solid,
+      "react-hooks": reactHooks,
+      "react-refresh": reactRefresh,
     },
     languageOptions: {
-      parser: tsparser,
       parserOptions: {
-        project: "./tsconfig.json",
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
       },
       globals: {
         ...globals.browser,
       },
     },
+    settings: {
+      react: {
+        version: "detect",
+      },
+    },
     rules: {
-      ...tseslint.configs.strict.rules,
-      ...solid.rules,
-      "@typescript-eslint/no-non-null-assertion": "off",
+      ...reactHooks.configs["recommended-latest"].rules,
+      "react-refresh/only-export-components": [
+        "warn",
+        { allowConstantExport: true },
+      ],
     },
   },
   {
-    ignores: ["dist/**", "node_modules/**"],
+    files: ["src/components/ui/**/*.{ts,tsx}"],
+    rules: {
+      "react-refresh/only-export-components": "off",
+    },
   },
-];
+  {
+    files: ["src/providers/auth-provider.tsx"],
+    rules: {
+      "react-refresh/only-export-components": "off",
+    },
+  }
+);

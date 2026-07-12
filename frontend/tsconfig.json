@@ -1,8 +1,6 @@
 {
   "compilerOptions": {
-    // General
-    "jsx": "preserve",
-    "jsxImportSource": "solid-js",
+    "jsx": "react-jsx",
     "target": "ESNext",
     // Modules
     "allowSyntheticDefaultImports": true,
@@ -14,8 +12,13 @@
     "skipLibCheck": true,
     // Type Checking & Safety
     "strict": true,
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
-  "include": ["src", "vite.config.ts"],
+  "include": ["src", "e2e", "vite.config.ts", "playwright.config.ts"],
   "exclude": ["dist", "node_modules"]
 }
