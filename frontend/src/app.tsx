@@ -1,27 +1,15 @@
-import { Suspense, type ParentComponent } from "solid-js";
-import { QueryProvider } from "./providers/query-client";
-import { AuthenticatedGuard, AuthProvider } from "./providers/auth";
-import { Navigation } from "./components/navbar";
-import { Toaster } from "solid-toast";
+import { type ReactNode } from "react";
 
-export const App: ParentComponent = (props) => {
+import { Toaster } from "@/components/ui/sonner";
+import { AuthProvider } from "@/providers/auth-provider";
+import { QueryProvider } from "@/providers/query-provider";
+import { AppRouter } from "@/router";
+
+export function App({ children }: { children?: ReactNode }) {
   return (
     <QueryProvider>
-      <AuthProvider>
-        <Toaster position="bottom-right" />
-        <Suspense>{props.children}</Suspense>
-      </AuthProvider>
+      <AuthProvider>{children ?? <AppRouter />}</AuthProvider>
+      <Toaster position="bottom-right" />
     </QueryProvider>
   );
-};
-
-export const AuthenticatedApp: ParentComponent = (props) => {
-  return (
-    <AuthenticatedGuard>
-      <Navigation />
-      <main class="mx-auto w-full max-w-xl py-6 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
-        <Suspense>{props.children}</Suspense>
-      </main>
-    </AuthenticatedGuard>
-  );
-};
+}

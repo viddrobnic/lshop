@@ -28,13 +28,13 @@ export async function apiFetch<T = unknown>(
       throw new UnauthorizedError("Unauthorized", response);
     }
 
-    const message = `HTTP ${response.status}: ${response.statusText}`;
+    const message = `HTTP ${String(response.status)}: ${response.statusText}`;
     throw new ApiError(message, response.status, response);
   }
 
   if (response.headers.get("content-type")?.startsWith("application/json")) {
-    return response.json();
-  } else {
-    return null;
+    return (await response.json()) as T;
   }
+
+  return null;
 }
