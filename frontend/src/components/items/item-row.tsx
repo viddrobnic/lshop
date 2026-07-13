@@ -27,8 +27,10 @@ export function ItemRow({
     disabled,
     collisionDetector: closestCenter,
   });
-  const { isPendingChecked, check, uncheck } = useItemChecker();
+  const { isPendingChecked, isCommittingChecked, check, uncheck } =
+    useItemChecker();
   const pending = isPendingChecked(item.id);
+  const committing = isCommittingChecked(item.id);
   return (
     <div
       ref={ref}
@@ -45,7 +47,7 @@ export function ItemRow({
           if (value) check(item.id);
           else uncheck(item.id);
         }}
-        disabled={disabled}
+        disabled={disabled || committing}
         aria-label={`Mark ${item.name} as checked`}
       />
       <span className="flex-1">{item.name}</span>

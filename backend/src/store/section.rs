@@ -21,7 +21,7 @@ pub struct Section {
 pub async fn create(db: &Db, store_id: i64, name: &str) -> Result<Section, sqlx::Error> {
     let now = time::OffsetDateTime::now_utc();
 
-    let mut tx = db.begin().await?;
+    let mut tx = db.begin_with("BEGIN IMMEDIATE").await?;
 
     let curr_ord: i64 = sqlx::query("SELECT MAX(ord) FROM sections WHERE store_id = ?")
         .bind(store_id)

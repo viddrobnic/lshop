@@ -4,6 +4,7 @@ export const CHECK_DELAY_MS = 1500;
 
 export type ItemChecker = {
   isPendingChecked: (itemId: number) => boolean;
+  isCommittingChecked: (itemId: number) => boolean;
   check: (itemId: number) => void;
   uncheck: (itemId: number) => void;
 };
