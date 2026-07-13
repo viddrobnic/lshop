@@ -10,6 +10,7 @@ import {
 } from "@dnd-kit/react";
 import { pointerIntersection } from "@dnd-kit/collision";
 import {
+  ChevronRightIcon,
   PackageIcon,
   PlusIcon,
   SparklesIcon,
@@ -20,6 +21,11 @@ import { toast } from "sonner";
 
 import { apiFetch } from "@/api";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Spinner } from "@/components/ui/spinner";
 import { queryKeys } from "@/data/query-keys";
 import {
@@ -37,6 +43,7 @@ import {
   buildItemContainers,
   buildItemMap,
   formatContainerId,
+  formatStoreDropTargetId,
   getItemMoveDestination,
   itemContainersEqual,
   moveItemToTarget,
@@ -46,6 +53,7 @@ import {
 
 import { ItemCheckerProvider } from "@/components/items/item-checker-provider";
 import { ItemOverlayRow, ItemRow } from "@/components/items/item-row";
+import { cn } from "@/lib/utils";
 
 function getContainerItems(
   containers: Partial<ItemContainers>,
@@ -260,16 +268,39 @@ function StoreItems({
   });
   const total = getTotalStore(store);
   const disabled = movePending || organize.isPending;
+  const { ref: storeDropRef, isDropTarget } = useDroppable({
+    id: formatStoreDropTargetId(store.id),
+    disabled,
+    collisionDetector: pointerIntersection,
+  });
   return (
-    <>
-      <div className="bg-background sticky top-0 z-30 flex h-14 items-center gap-3 px-3">
-        <span className="bg-secondary/10 text-secondary-foreground flex size-7 items-center justify-center rounded-md">
-          <StoreIcon className="size-4" />
-        </span>
-        <span className="text-secondary-foreground truncate text-lg font-bold tracking-tight">
-          {store.name}
-        </span>
-        <Count value={total} />
+    <Collapsible>
+      <div
+        ref={storeDropRef}
+        className={cn(
+          "bg-background sticky top-0 z-30 flex h-14 items-center gap-3 px-3 transition-colors",
+          isDropTarget && "bg-primary/10 ring-primary ring-2 ring-inset"
+        )}
+      >
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="group flex min-w-0 flex-1 items-center gap-3 text-left"
+            aria-label={`Toggle ${store.name}`}
+          >
+            <ChevronRightIcon
+              className="size-4 shrink-0 transition-transform group-data-[state=open]:rotate-90"
+              aria-hidden="true"
+            />
+            <span className="bg-secondary/10 text-secondary-foreground flex size-7 shrink-0 items-center justify-center rounded-md">
+              <StoreIcon className="size-4" />
+            </span>
+            <span className="text-secondary-foreground truncate text-lg font-bold tracking-tight">
+              {store.name}
+            </span>
+            <Count value={total} />
+          </button>
+        </CollapsibleTrigger>
         <div className="ml-auto flex gap-2">
           <Button
             size="sm"
@@ -294,39 +325,41 @@ function StoreItems({
           </Button>
         </div>
       </div>
-      <ItemContainer
-        title="Unassigned"
-        icon={<CircleQuestionMarkIcon className="size-3.5" />}
-        containerId={formatContainerId({ storeId: store.id })}
-        containers={containers}
-        itemMap={itemMap}
-        inset={2}
-        headerClass="top-14 z-20 pl-7"
-        disabled={disabled}
-        onAddItem={onAddItem}
-      />
-      {store.sections.map((section) => (
+      <CollapsibleContent>
         <ItemContainer
-          key={section.id}
-          title={section.name}
-          icon={<PackageIcon className="size-3.5" />}
-          containerId={formatContainerId({
-            storeId: section.store_id,
-            sectionId: section.id,
-          })}
+          title="Unassigned"
+          icon={<CircleQuestionMarkIcon className="size-3.5" />}
+          containerId={formatContainerId({ storeId: store.id })}
           containers={containers}
           itemMap={itemMap}
           inset={2}
           headerClass="top-14 z-20 pl-7"
           disabled={disabled}
-          addTarget={{
-            store_id: section.store_id,
-            section_id: section.id,
-          }}
           onAddItem={onAddItem}
         />
-      ))}
-    </>
+        {store.sections.map((section) => (
+          <ItemContainer
+            key={section.id}
+            title={section.name}
+            icon={<PackageIcon className="size-3.5" />}
+            containerId={formatContainerId({
+              storeId: section.store_id,
+              sectionId: section.id,
+            })}
+            containers={containers}
+            itemMap={itemMap}
+            inset={2}
+            headerClass="top-14 z-20 pl-7"
+            disabled={disabled}
+            addTarget={{
+              store_id: section.store_id,
+              section_id: section.id,
+            }}
+            onAddItem={onAddItem}
+          />
+        ))}
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
@@ -354,58 +387,79 @@ function ItemContainer({
   onAddItem: OpenAddItem;
 }) {
   // Containers establish the pointer's destination first; sortable rows then use closest-center within it.
-  const { ref } = useDroppable({
+  const { ref, isDropTarget } = useDroppable({
     id: containerId,
     disabled,
     collisionDetector: pointerIntersection,
   });
   const itemIds = getContainerItems(containers, containerId);
   return (
-    <section ref={ref}>
-      <div
-        className={`bg-background sticky flex items-center gap-3 py-3 pr-3 ${headerClass} ${inset === 1 ? "pl-3" : ""}`}
-      >
-        <span className="bg-primary/10 text-primary flex size-6 shrink-0 items-center justify-center rounded-md">
-          {icon}
-        </span>
-        <span
-          className={
-            inset === 1
-              ? "text-muted-foreground text-lg font-bold tracking-tight"
-              : "text-muted-foreground font-semibold tracking-tight"
-          }
+    <Collapsible asChild>
+      <section ref={ref}>
+        <div
+          className={cn(
+            "bg-background sticky flex items-center gap-3 py-3 pr-3 transition-colors",
+            headerClass,
+            inset === 1 && "pl-3",
+            isDropTarget && "bg-primary/10 ring-primary ring-2 ring-inset"
+          )}
         >
-          {title}
-        </span>
-        <Count value={itemIds.length} />
-        {addTarget ? (
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            className="ml-auto"
-            onClick={() => {
-              onAddItem(addTarget);
-            }}
-            aria-label={`Add item to ${title}`}
-          >
-            <PlusIcon />
-          </Button>
-        ) : null}
-      </div>
-      {itemIds.map((id, index) => {
-        const item = itemMap.get(id);
-        return item ? (
-          <ItemRow
-            key={id}
-            item={item}
-            index={index}
-            containerId={containerId}
-            inset={inset}
-            disabled={disabled}
-          />
-        ) : null;
-      })}
-    </section>
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="group flex min-w-0 flex-1 items-center gap-3 text-left"
+              aria-label={`Toggle ${title}`}
+            >
+              <ChevronRightIcon
+                className="size-4 shrink-0 transition-transform group-data-[state=open]:rotate-90"
+                aria-hidden="true"
+              />
+              <span className="bg-primary/10 text-primary flex size-6 shrink-0 items-center justify-center rounded-md">
+                {icon}
+              </span>
+              <span
+                className={
+                  inset === 1
+                    ? "text-muted-foreground text-lg font-bold tracking-tight"
+                    : "text-muted-foreground font-semibold tracking-tight"
+                }
+              >
+                {title}
+              </span>
+              <Count value={itemIds.length} />
+            </button>
+          </CollapsibleTrigger>
+          {addTarget ? (
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              className="ml-auto"
+              onClick={() => {
+                onAddItem(addTarget);
+              }}
+              aria-label={`Add item to ${title}`}
+            >
+              <PlusIcon />
+            </Button>
+          ) : null}
+        </div>
+        <CollapsibleContent>
+          {itemIds.map((id, index) => {
+            const item = itemMap.get(id);
+            return item ? (
+              <ItemRow
+                key={id}
+                item={item}
+                index={index}
+                containerId={containerId}
+                inset={inset}
+                disabled={disabled}
+              />
+            ) : null;
+          })}
+        </CollapsibleContent>
+      </section>
+    </Collapsible>
   );
 }
 
