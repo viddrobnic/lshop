@@ -7,6 +7,8 @@ export type ContainerId =
   | `store-${number}-unassigned`
   | `section-${number}-${number}`;
 
+export type StoreDropTargetId = `store-drop-${number}`;
+
 export type ItemContainers = Record<ContainerId, number[]>;
 
 export type ContainerTarget = {
@@ -40,6 +42,10 @@ export function formatContainerId({
   }
 
   return GLOBAL_UNASSIGNED_CONTAINER_ID;
+}
+
+export function formatStoreDropTargetId(storeId: number): StoreDropTargetId {
+  return `store-drop-${String(storeId)}` as StoreDropTargetId;
 }
 
 export function parseContainerId(containerId: string): ContainerTarget | null {
@@ -116,19 +122,28 @@ export function findItemContainer(
 export function getDropDestination(
   containers: ItemContainers,
   itemId: number,
-  overId: ContainerId | number
+  overId: string | number
 ): { containerId: ContainerId; index: number } | null {
   const sourceContainerId = findItemContainer(containers, itemId);
   if (!sourceContainerId) {
     return null;
   }
 
+  const storeTargetMatch =
+    typeof overId === "string" ? /^store-drop-(\d+)$/.exec(overId) : null;
   const destinationContainerId =
-    typeof overId === "string" ? overId : findItemContainer(containers, overId);
+    typeof overId === "number"
+      ? findItemContainer(containers, overId)
+      : storeTargetMatch
+        ? formatContainerId({ storeId: Number(storeTargetMatch[1]) })
+        : (overId as ContainerId);
   if (!destinationContainerId) {
     return null;
   }
 
+  if (!(destinationContainerId in containers)) {
+    return null;
+  }
   const destinationItems = containers[destinationContainerId];
   const overIndex =
     typeof overId === "string"
@@ -192,11 +207,7 @@ export function moveItemToTarget(
   itemId: number,
   targetId: string | number
 ) {
-  const destination = getDropDestination(
-    containers,
-    itemId,
-    typeof targetId === "string" ? (targetId as ContainerId) : targetId
-  );
+  const destination = getDropDestination(containers, itemId, targetId);
   return destination
     ? moveItem(containers, {
         itemId,

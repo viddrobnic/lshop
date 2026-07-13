@@ -5,6 +5,7 @@ import {
   buildItemMap,
   findItemContainer,
   formatContainerId,
+  formatStoreDropTargetId,
   getDropDestination,
   getItemMoveDestination,
   GLOBAL_UNASSIGNED_CONTAINER_ID,
@@ -87,6 +88,7 @@ describe("item containers", () => {
   it("formats and parses the exact container ID contract", () => {
     expect(formatContainerId({})).toBe(GLOBAL_UNASSIGNED_CONTAINER_ID);
     expect(formatContainerId({ storeId: 10 })).toBe("store-10-unassigned");
+    expect(formatStoreDropTargetId(10)).toBe("store-drop-10");
     expect(formatContainerId({ storeId: 10, sectionId: 20 })).toBe(
       "section-10-20"
     );
@@ -116,6 +118,10 @@ describe("item containers", () => {
       index: 1,
     });
     expect(getDropDestination(state, 1, "store-10-unassigned")).toEqual({
+      containerId: "store-10-unassigned",
+      index: 2,
+    });
+    expect(getDropDestination(state, 1, "store-drop-10")).toEqual({
       containerId: "store-10-unassigned",
       index: 2,
     });
