@@ -49,19 +49,61 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  style,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
 }) {
+  const [visualViewport, setVisualViewport] = React.useState(() => {
+    const viewport = window.visualViewport;
+    return viewport
+      ? {
+          height: viewport.height,
+          left: viewport.offsetLeft + viewport.width / 2,
+          top: viewport.offsetTop + viewport.height / 2,
+        }
+      : null;
+  });
+
+  React.useLayoutEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const updatePosition = () => {
+      setVisualViewport({
+        height: viewport.height,
+        left: viewport.offsetLeft + viewport.width / 2,
+        top: viewport.offsetTop + viewport.height / 2,
+      });
+    };
+
+    viewport.addEventListener("resize", updatePosition);
+    viewport.addEventListener("scroll", updatePosition);
+    return () => {
+      viewport.removeEventListener("resize", updatePosition);
+      viewport.removeEventListener("scroll", updatePosition);
+    };
+  }, []);
+
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "bg-popover text-popover-foreground ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl p-4 text-sm ring-1 duration-100 outline-none sm:max-w-sm",
+          "bg-popover text-popover-foreground ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl p-4 text-sm ring-1 duration-100 outline-none sm:max-w-sm",
           className
         )}
+        style={{
+          ...(visualViewport
+            ? {
+                left: visualViewport.left,
+                top: visualViewport.top,
+                maxHeight: visualViewport.height - 32,
+              }
+            : null),
+          ...style,
+        }}
         {...props}
       >
         {children}

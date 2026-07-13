@@ -14,7 +14,7 @@ import {
 import { queryKeys } from "@/data/query-keys";
 import type { Store } from "@/data/stores";
 
-export function StoresPage() {
+export default function StoresPage() {
   const [editingStore, setEditingStore] = useState<Store | null>(null);
   const [deletingStore, setDeletingStore] = useState<Store | null>(null);
   const stores = useQuery({

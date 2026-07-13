@@ -578,14 +578,12 @@ Add tests as part of the rewrite rather than after all behavior has moved.
 - Vitest for unit and component/integration tests.
 - React Testing Library and `@testing-library/user-event` for user behavior.
 - MSW for deterministic API interception and request-payload assertions.
-- Playwright for browser-level routing, dialogs, drag/drop, responsive behavior, and screenshots.
-- Use fake timers only for delayed-check unit/integration tests; use real timers sparingly in E2E.
+- Use fake timers only for delayed-check unit/integration tests.
 
 Add scripts with clear names, at minimum:
 
 - `test`: run unit/integration tests once.
 - `test:watch`: local watch mode.
-- `test:e2e`: Playwright suite.
 - Existing `build`, `tsc`, `lint`, and Prettier scripts.
 - Optionally `check` to run typecheck, lint, formatting, unit tests, and build in a deterministic sequence.
 
@@ -648,7 +646,7 @@ accessibility assertions.
 
 - [ ] React Strict Mode is enabled and produces no duplicate mutations or lifecycle warnings.
 - [ ] TypeScript strict checking passes without broad `any` or suppression comments.
-- [ ] ESLint, Prettier, unit/integration tests, E2E tests, and production build pass.
+- [ ] ESLint, Prettier, unit/integration tests, and production build pass.
 - [ ] QueryClient, dnd sensors/provider state, contexts, and timers remain stable across renders.
 - [ ] No Solid, DaisyUI, old dnd, old icon, or old toast dependency remains.
 - [ ] All shadcn primitives were installed via CLI and unnecessary primitives were removed.
@@ -703,8 +701,6 @@ Agents can also fetch the official machine-readable indexes directly:
 
 ### Other useful agent tools
 
-- Playwright MCP or ordinary Playwright CLI: strongly recommended for baseline screenshots, responsive comparison, real
-  dialogs, and drag/drop verification.
 - Browser devtools automation: useful for network payload comparison and accessibility-tree inspection.
 - Context7 or another documentation MCP: optional fallback for React Router and dnd-kit, but official docs/LLM indexes
   should be preferred when available.

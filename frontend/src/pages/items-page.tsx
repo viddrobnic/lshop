@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { DragDropProvider, DragOverlay, useDroppable } from "@dnd-kit/react";
+import {
+  DragDropProvider,
+  DragOverlay,
+  useDroppable,
+  type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
+} from "@dnd-kit/react";
 import { pointerIntersection } from "@dnd-kit/collision";
 import {
   PackageIcon,
@@ -15,25 +22,28 @@ import { apiFetch } from "@/api";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { queryKeys } from "@/data/query-keys";
-import type {
-  Item,
-  ItemList,
-  ItemListSection,
-  ItemListStore,
+import {
+  getTotal,
+  getTotalStore,
+  type Item,
+  type ItemList,
+  type ItemListStore,
 } from "@/data/items";
+import {
+  AddItemDialog,
+  type AddItemTarget,
+} from "@/components/items/add-item-dialog";
 import {
   buildItemContainers,
   buildItemMap,
   formatContainerId,
-  getDropDestination,
   getItemMoveDestination,
-  itemContainersReducer,
+  itemContainersEqual,
+  moveItemToTarget,
   type ContainerId,
   type ItemContainers,
 } from "@/components/items/item-containers";
 
-import { AddItemDialogProvider } from "@/components/items/add-item-dialog";
-import { useAddItemDialog } from "@/components/items/add-item-dialog-context";
 import { ItemCheckerProvider } from "@/components/items/item-checker-provider";
 import { ItemOverlayRow, ItemRow } from "@/components/items/item-row";
 
@@ -44,21 +54,9 @@ function getContainerItems(
   return containers[id] ?? [];
 }
 
-function sameContainers(a: ItemContainers, b: ItemContainers) {
-  const aKeys = Object.keys(a);
-  return (
-    aKeys.length === Object.keys(b).length &&
-    aKeys.every((key) => {
-      const containerId = key as ContainerId;
-      return (
-        a[containerId].every((id, index) => id === b[containerId][index]) &&
-        a[containerId].length === b[containerId].length
-      );
-    })
-  );
-}
+type OpenAddItem = (target: AddItemTarget) => void;
 
-export function ItemsPage() {
+export default function ItemsPage() {
   const queryClient = useQueryClient();
   const itemsQuery = useQuery({
     queryKey: queryKeys.items,
@@ -67,11 +65,12 @@ export function ItemsPage() {
   const [containers, setContainers] = useState<ItemContainers>({
     "global-unassigned": [],
   });
+  const [addItemTarget, setAddItemTarget] = useState<AddItemTarget | null>(
+    null
+  );
   const containersRef = useRef(containers);
   const snapshotRef = useRef<ItemContainers | null>(null);
-  const activeItemRef = useRef<number | null>(null);
   const [activeItem, setActiveItem] = useState<Item | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
   const itemMap = itemsQuery.data
     ? buildItemMap(itemsQuery.data)
     : new Map<number, Item>();
@@ -100,119 +99,73 @@ export function ItemsPage() {
     onSuccess: () => {
       return queryClient.invalidateQueries({ queryKey: queryKeys.items });
     },
-    onError: () => {
-      if (itemsQuery.data)
-        updateContainers(buildItemContainers(itemsQuery.data));
-      toast.error("Failed to move item");
-    },
   });
 
   const updateContainers = (
     next: ItemContainers | ((current: ItemContainers) => ItemContainers)
   ) => {
-    setContainers((current) => {
-      const resolved = typeof next === "function" ? next(current) : next;
-      containersRef.current = resolved;
-      return resolved;
-    });
+    const resolved =
+      typeof next === "function" ? next(containersRef.current) : next;
+    containersRef.current = resolved;
+    setContainers(resolved);
   };
 
   useEffect(() => {
-    if (itemsQuery.data && !isDragging && !moveMutation.isPending)
+    if (itemsQuery.data && !activeItem && !moveMutation.isPending)
       updateContainers(buildItemContainers(itemsQuery.data));
-  }, [itemsQuery.data, isDragging, moveMutation.isPending]);
+  }, [itemsQuery.data, activeItem, moveMutation.isPending]);
 
-  const handleDragStart = ({
-    operation,
-  }: {
-    operation: { source: { id: string | number } | null };
-  }) => {
-    const sourceId = operation.source?.id;
-    const itemId = typeof sourceId === "string" ? Number(sourceId) : sourceId;
-    if (
-      itemId === undefined ||
-      !Number.isInteger(itemId) ||
-      moveMutation.isPending
-    )
-      return;
+  const handleDragStart = ({ operation }: DragStartEvent) => {
+    const itemId = operation.source?.id;
+    if (typeof itemId !== "number" || moveMutation.isPending) return;
+    const item = itemMap.get(itemId);
+    if (!item) return;
     snapshotRef.current = containersRef.current;
-    activeItemRef.current = itemId;
-    setActiveItem(itemMap.get(itemId) ?? null);
-    setIsDragging(true);
+    setActiveItem(item);
   };
-  const movedToTarget = (
-    current: ItemContainers,
-    sourceId: number,
-    targetId: string | number
-  ) => {
-    const destination = getDropDestination(
-      current,
-      sourceId,
-      typeof targetId === "string" ? (targetId as ContainerId) : targetId
-    );
-    if (!destination) return current;
-    return itemContainersReducer(current, {
-      type: "move-item",
-      itemId: sourceId,
-      destinationContainerId: destination.containerId,
-      index: destination.index,
-    });
+  const handleDragOver = ({ operation }: DragOverEvent) => {
+    const itemId = operation.source?.id;
+    const targetId = operation.target?.id;
+    if (typeof itemId !== "number" || targetId === undefined) return;
+    updateContainers((current) => moveItemToTarget(current, itemId, targetId));
   };
-  const moveToTarget = (sourceId: number, targetId: string | number) => {
-    updateContainers((current) => movedToTarget(current, sourceId, targetId));
-  };
-  const handleDragOver = ({
-    operation,
-  }: {
-    operation: {
-      source: { id: string | number } | null;
-      target: { id: string | number } | null;
-    };
-  }) => {
-    const source = operation.source?.id;
-    const target = operation.target?.id;
-    if (
-      source !== undefined &&
-      target !== undefined &&
-      typeof source === "number"
-    )
-      moveToTarget(source, target);
-  };
-  const handleDragEnd = ({
-    operation,
-    canceled,
-  }: {
-    operation: {
-      source: { id: string | number } | null;
-      target: { id: string | number } | null;
-    };
-    canceled: boolean;
-  }) => {
-    const itemId = activeItemRef.current;
+  const handleDragEnd = ({ operation, canceled }: DragEndEvent) => {
+    const itemId = operation.source?.id;
+    const targetId = operation.target?.id;
     const snapshot = snapshotRef.current;
-    activeItemRef.current = null;
     snapshotRef.current = null;
     setActiveItem(null);
-    setIsDragging(false);
-    if (!itemId || !snapshot || canceled || !operation.target) {
+    if (
+      typeof itemId !== "number" ||
+      !snapshot ||
+      canceled ||
+      targetId === undefined
+    ) {
       if (snapshot) updateContainers(snapshot);
       return;
     }
     // The current target may not have emitted dragover after the last pointer move.
-    const finalContainers = movedToTarget(
+    const finalContainers = moveItemToTarget(
       containersRef.current,
       itemId,
-      operation.target.id
+      targetId
     );
-    if (finalContainers !== containersRef.current)
-      updateContainers(finalContainers);
-    if (sameContainers(snapshot, finalContainers)) return;
+    updateContainers(finalContainers);
+    if (itemContainersEqual(snapshot, finalContainers)) return;
     const destination = getItemMoveDestination(finalContainers, itemId);
     if (!destination) {
       updateContainers(snapshot);
       return;
     }
-    moveMutation.mutate({ itemId, ...destination });
+    moveMutation.mutate(
+      { itemId, ...destination },
+      {
+        onError: () => {
+          updateContainers(snapshot);
+          toast.error("Failed to move item");
+        },
+      }
+    );
   };
 
   if (itemsQuery.isPending)
@@ -228,13 +181,16 @@ export function ItemsPage() {
         Error: {itemsQuery.error?.message ?? "Unable to load items"}
       </p>
     );
-  const total = Object.values(containers).reduce(
-    (count, ids) => count + ids.length,
-    0
-  );
+  const total = getTotal(itemsQuery.data);
 
   return (
-    <AddItemDialogProvider>
+    <>
+      <AddItemDialog
+        target={addItemTarget}
+        onClose={() => {
+          setAddItemTarget(null);
+        }}
+      />
       <ItemCheckerProvider>
         <div className="flex items-center px-4">
           <h1 className="text-primary text-3xl font-bold">Items</h1>
@@ -256,6 +212,7 @@ export function ItemsPage() {
               headerClass="top-0 z-30"
               disabled={moveMutation.isPending}
               addTarget={{}}
+              onAddItem={setAddItemTarget}
             />
             {itemsQuery.data.stores.map((store) => (
               <StoreItems
@@ -264,6 +221,7 @@ export function ItemsPage() {
                 containers={containers}
                 itemMap={itemMap}
                 movePending={moveMutation.isPending}
+                onAddItem={setAddItemTarget}
               />
             ))}
           </div>
@@ -272,7 +230,7 @@ export function ItemsPage() {
           </DragOverlay>
         </DragDropProvider>
       </ItemCheckerProvider>
-    </AddItemDialogProvider>
+    </>
   );
 }
 
@@ -281,14 +239,15 @@ function StoreItems({
   containers,
   itemMap,
   movePending,
+  onAddItem,
 }: {
   store: ItemListStore;
   containers: ItemContainers;
   itemMap: Map<number, Item>;
   movePending: boolean;
+  onAddItem: OpenAddItem;
 }) {
   const queryClient = useQueryClient();
-  const { open } = useAddItemDialog();
   const organize = useMutation({
     mutationFn: () =>
       apiFetch(`/stores/${String(store.id)}/organize`, { method: "POST" }),
@@ -299,20 +258,15 @@ function StoreItems({
       toast.error("Failed to sort items");
     },
   });
-  const total = [
-    formatContainerId({ storeId: store.id }),
-    ...store.sections.map((section) =>
-      formatContainerId({ storeId: store.id, sectionId: section.id })
-    ),
-  ].reduce((count, id) => count + getContainerItems(containers, id).length, 0);
+  const total = getTotalStore(store);
   const disabled = movePending || organize.isPending;
   return (
     <>
-      <div className="bg-background sticky top-0 z-30 flex items-center gap-3 px-3 py-3">
-        <span className="bg-secondary/10 text-secondary flex size-7 items-center justify-center rounded-md">
+      <div className="bg-background sticky top-0 z-30 flex h-14 items-center gap-3 px-3">
+        <span className="bg-secondary/10 text-secondary-foreground flex size-7 items-center justify-center rounded-md">
           <StoreIcon className="size-4" />
         </span>
-        <span className="text-secondary truncate text-lg font-bold tracking-tight">
+        <span className="text-secondary-foreground truncate text-lg font-bold tracking-tight">
           {store.name}
         </span>
         <Count value={total} />
@@ -332,7 +286,7 @@ function StoreItems({
             size="icon-sm"
             variant="secondary"
             onClick={() => {
-              open({ store_id: store.id });
+              onAddItem({ store_id: store.id });
             }}
             aria-label={`Add item to ${store.name}`}
           >
@@ -349,46 +303,30 @@ function StoreItems({
         inset={2}
         headerClass="top-14 z-20 pl-7"
         disabled={disabled}
+        onAddItem={onAddItem}
       />
       {store.sections.map((section) => (
-        <SectionItems
+        <ItemContainer
           key={section.id}
-          section={section}
+          title={section.name}
+          icon={<PackageIcon className="size-3.5" />}
+          containerId={formatContainerId({
+            storeId: section.store_id,
+            sectionId: section.id,
+          })}
           containers={containers}
           itemMap={itemMap}
+          inset={2}
+          headerClass="top-14 z-20 pl-7"
           disabled={disabled}
+          addTarget={{
+            store_id: section.store_id,
+            section_id: section.id,
+          }}
+          onAddItem={onAddItem}
         />
       ))}
     </>
-  );
-}
-
-function SectionItems({
-  section,
-  containers,
-  itemMap,
-  disabled,
-}: {
-  section: ItemListSection;
-  containers: ItemContainers;
-  itemMap: Map<number, Item>;
-  disabled: boolean;
-}) {
-  return (
-    <ItemContainer
-      title={section.name}
-      icon={<PackageIcon className="size-3.5" />}
-      containerId={formatContainerId({
-        storeId: section.store_id,
-        sectionId: section.id,
-      })}
-      containers={containers}
-      itemMap={itemMap}
-      inset={2}
-      headerClass="top-14 z-20 pl-7"
-      disabled={disabled}
-      addTarget={{ store_id: section.store_id, section_id: section.id }}
-    />
   );
 }
 
@@ -402,6 +340,7 @@ function ItemContainer({
   headerClass,
   disabled,
   addTarget,
+  onAddItem,
 }: {
   title: string;
   icon: ReactNode;
@@ -411,20 +350,20 @@ function ItemContainer({
   inset: number;
   headerClass: string;
   disabled: boolean;
-  addTarget?: { store_id?: number; section_id?: number };
+  addTarget?: AddItemTarget;
+  onAddItem: OpenAddItem;
 }) {
   // Containers establish the pointer's destination first; sortable rows then use closest-center within it.
-  const { ref, isDropTarget } = useDroppable({
+  const { ref } = useDroppable({
     id: containerId,
     disabled,
     collisionDetector: pointerIntersection,
   });
-  const { open } = useAddItemDialog();
   const itemIds = getContainerItems(containers, containerId);
   return (
-    <section ref={ref} className={isDropTarget ? "bg-primary/5" : undefined}>
+    <section ref={ref}>
       <div
-        className={`bg-background sticky mb-px flex items-center gap-3 py-3 pr-3 ${headerClass} ${inset === 1 ? "pl-3" : ""}`}
+        className={`bg-background sticky flex items-center gap-3 py-3 pr-3 ${headerClass} ${inset === 1 ? "pl-3" : ""}`}
       >
         <span className="bg-primary/10 text-primary flex size-6 shrink-0 items-center justify-center rounded-md">
           {icon}
@@ -445,7 +384,7 @@ function ItemContainer({
             variant="ghost"
             className="ml-auto"
             onClick={() => {
-              open(addTarget);
+              onAddItem(addTarget);
             }}
             aria-label={`Add item to ${title}`}
           >
@@ -477,5 +416,3 @@ function Count({ value }: { value: number }) {
     </span>
   );
 }
-
-export default ItemsPage;

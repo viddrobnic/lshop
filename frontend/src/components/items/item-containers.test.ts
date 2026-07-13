@@ -8,7 +8,9 @@ import {
   getDropDestination,
   getItemMoveDestination,
   GLOBAL_UNASSIGNED_CONTAINER_ID,
-  itemContainersReducer,
+  itemContainersEqual,
+  moveItem,
+  moveItemToTarget,
   parseContainerId,
   type ItemContainers,
 } from "./item-containers";
@@ -130,8 +132,7 @@ describe("item containers", () => {
 
   it("moves atomically between containers without mutating the prior state", () => {
     const state = containers();
-    const next = itemContainersReducer(state, {
-      type: "move-item",
+    const next = moveItem(state, {
       itemId: 5,
       destinationContainerId: "store-10-unassigned",
       index: 1,
@@ -149,8 +150,7 @@ describe("item containers", () => {
 
   it("reorders within a container and clamps out-of-range insertion indices", () => {
     expect(
-      itemContainersReducer(containers(), {
-        type: "move-item",
+      moveItem(containers(), {
         itemId: 1,
         destinationContainerId: "global-unassigned",
         index: 1,
@@ -158,8 +158,7 @@ describe("item containers", () => {
     ).toEqual([2, 1]);
 
     expect(
-      itemContainersReducer(containers(), {
-        type: "move-item",
+      moveItem(containers(), {
         itemId: 6,
         destinationContainerId: "section-10-20",
         index: -10,
@@ -171,16 +170,14 @@ describe("item containers", () => {
     const state = containers();
 
     expect(
-      itemContainersReducer(state, {
-        type: "move-item",
+      moveItem(state, {
         itemId: 1,
         destinationContainerId: "global-unassigned",
         index: 0,
       })
     ).toBe(state);
     expect(
-      itemContainersReducer(state, {
-        type: "move-item",
+      moveItem(state, {
         itemId: 99,
         destinationContainerId: "global-unassigned",
         index: 0,
@@ -188,26 +185,8 @@ describe("item containers", () => {
     ).toBe(state);
   });
 
-  it("restores a drag-start snapshot for a cancelled drag", () => {
-    const snapshot = containers();
-    const moved = itemContainersReducer(snapshot, {
-      type: "move-item",
-      itemId: 5,
-      destinationContainerId: "section-11-30",
-      index: 0,
-    });
-
-    expect(
-      itemContainersReducer(moved, {
-        type: "restore-item-containers",
-        containers: snapshot,
-      })
-    ).toBe(snapshot);
-  });
-
   it("derives the backend destination and final zero-based index", () => {
-    const next = itemContainersReducer(containers(), {
-      type: "move-item",
+    const next = moveItem(containers(), {
       itemId: 5,
       destinationContainerId: "section-11-30",
       index: 0,
@@ -219,5 +198,14 @@ describe("item containers", () => {
       index: 0,
     });
     expect(getItemMoveDestination(next, 99)).toBeNull();
+  });
+
+  it("moves to a drag target and compares resulting container order", () => {
+    const state = containers();
+    const moved = moveItemToTarget(state, 5, "section-11-30");
+
+    expect(moved["section-11-30"]).toEqual([5]);
+    expect(itemContainersEqual(state, moved)).toBe(false);
+    expect(itemContainersEqual(state, containers())).toBe(true);
   });
 });
