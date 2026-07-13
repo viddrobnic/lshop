@@ -18,19 +18,11 @@ export type ItemMoveDestination = ContainerTarget & {
   index: number;
 };
 
-export type MoveItemAction = {
-  type: "move-item";
+type MoveItem = {
   itemId: number;
   destinationContainerId: ContainerId;
   index: number;
 };
-
-export type RestoreItemContainersAction = {
-  type: "restore-item-containers";
-  containers: ItemContainers;
-};
-
-export type ItemContainersAction = MoveItemAction | RestoreItemContainersAction;
 
 export function formatContainerId({
   storeId,
@@ -150,33 +142,29 @@ export function getDropDestination(
   return { containerId: destinationContainerId, index: overIndex };
 }
 
-export function itemContainersReducer(
+export function moveItem(
   containers: ItemContainers,
-  action: ItemContainersAction
+  move: MoveItem
 ): ItemContainers {
-  if (action.type === "restore-item-containers") {
-    return action.containers;
-  }
-
-  const sourceContainerId = findItemContainer(containers, action.itemId);
-  const destinationItems = containers[action.destinationContainerId];
+  const sourceContainerId = findItemContainer(containers, move.itemId);
+  const destinationItems = containers[move.destinationContainerId];
   if (!sourceContainerId) {
     return containers;
   }
 
   const sourceItems = containers[sourceContainerId];
-  const sourceIndex = sourceItems.indexOf(action.itemId);
+  const sourceIndex = sourceItems.indexOf(move.itemId);
   const sourceWithoutItem = sourceItems.filter(
-    (itemId) => itemId !== action.itemId
+    (itemId) => itemId !== move.itemId
   );
   const insertionItems =
-    sourceContainerId === action.destinationContainerId
+    sourceContainerId === move.destinationContainerId
       ? sourceWithoutItem
       : destinationItems;
-  const index = Math.max(0, Math.min(action.index, insertionItems.length));
+  const index = Math.max(0, Math.min(move.index, insertionItems.length));
 
   if (
-    sourceContainerId === action.destinationContainerId &&
+    sourceContainerId === move.destinationContainerId &&
     sourceIndex === index
   ) {
     return containers;
@@ -184,19 +172,50 @@ export function itemContainersReducer(
 
   const nextDestination = [
     ...insertionItems.slice(0, index),
-    action.itemId,
+    move.itemId,
     ...insertionItems.slice(index),
   ];
 
-  if (sourceContainerId === action.destinationContainerId) {
+  if (sourceContainerId === move.destinationContainerId) {
     return { ...containers, [sourceContainerId]: nextDestination };
   }
 
   return {
     ...containers,
     [sourceContainerId]: sourceWithoutItem,
-    [action.destinationContainerId]: nextDestination,
+    [move.destinationContainerId]: nextDestination,
   };
+}
+
+export function moveItemToTarget(
+  containers: ItemContainers,
+  itemId: number,
+  targetId: string | number
+) {
+  const destination = getDropDestination(
+    containers,
+    itemId,
+    typeof targetId === "string" ? (targetId as ContainerId) : targetId
+  );
+  return destination
+    ? moveItem(containers, {
+        itemId,
+        destinationContainerId: destination.containerId,
+        index: destination.index,
+      })
+    : containers;
+}
+
+export function itemContainersEqual(a: ItemContainers, b: ItemContainers) {
+  const containerIds = Object.keys(a) as ContainerId[];
+  return (
+    containerIds.length === Object.keys(b).length &&
+    containerIds.every(
+      (id) =>
+        a[id].length === b[id].length &&
+        a[id].every((itemId, index) => itemId === b[id][index])
+    )
+  );
 }
 
 export function getItemMoveDestination(

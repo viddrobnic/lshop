@@ -20,6 +20,9 @@ vi.mock("@/api", async (importOriginal) => ({
 }));
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
+vi.mock("@/providers/auth-provider", () => ({
+  useAuth: () => ({ isPending: false, user: null }),
+}));
 
 function Location() {
   return <p>{useLocation().pathname}</p>;

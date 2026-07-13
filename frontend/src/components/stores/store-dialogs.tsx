@@ -16,12 +16,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/responsive-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
@@ -49,7 +49,7 @@ function NameDialog({
 }: NameDialogProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   return (
-    <Dialog
+    <ResponsiveDialog
       open={open}
       onOpenChange={(nextOpen) => {
         if (!isPending) {
@@ -57,15 +57,15 @@ function NameDialog({
         }
       }}
     >
-      <DialogContent
+      <ResponsiveDialogContent
         onOpenAutoFocus={(event) => {
           event.preventDefault();
           inputRef.current?.focus({ preventScroll: true });
         }}
       >
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>{title}</ResponsiveDialogTitle>
+        </ResponsiveDialogHeader>
         <form
           className="grid gap-4"
           onSubmit={(event) => {
@@ -76,7 +76,7 @@ function NameDialog({
             }
           }}
         >
-          <div className="grid gap-2">
+          <div className="grid gap-2 px-4 md:px-0">
             <Label htmlFor="resource-name">Name</Label>
             <Input
               ref={inputRef}
@@ -88,7 +88,7 @@ function NameDialog({
               disabled={isPending}
             />
           </div>
-          <DialogFooter>
+          <ResponsiveDialogFooter>
             <Button
               type="button"
               variant="outline"
@@ -103,10 +103,10 @@ function NameDialog({
               {isPending ? <Spinner data-icon="inline-start" /> : null}
               {submitLabel}
             </Button>
-          </DialogFooter>
+          </ResponsiveDialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }
 

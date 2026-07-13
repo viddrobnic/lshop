@@ -58,7 +58,7 @@ export function StoreItem({
             className="flex w-full items-center gap-3 py-3 pr-24 pl-4 text-left"
             aria-label={`${open ? "Collapse" : "Expand"} ${store.name}`}
           >
-            <div className="bg-secondary/10 text-secondary flex size-7 shrink-0 items-center justify-center rounded-md">
+            <div className="bg-secondary/10 text-secondary-foreground flex size-7 shrink-0 items-center justify-center rounded-md">
               <StoreIcon className="size-4" />
             </div>
             <span className="min-w-0 flex-1 truncate text-lg font-bold tracking-tight">

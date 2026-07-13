@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CircleAlertIcon } from "lucide-react";
 import type { SyntheticEvent } from "react";
-import { useNavigate } from "react-router";
+import { Navigate, useNavigate } from "react-router";
 import { toast } from "sonner";
 
 import { apiFetch, UnauthorizedError } from "@/api";
@@ -11,10 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { queryKeys } from "@/data/query-keys";
+import { useAuth } from "@/providers/auth-provider";
 
 type Credentials = { username: string; password: string };
 
-export function LoginPage() {
+export default function LoginPage() {
+  const { isPending, user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const loginMutation = useMutation({
@@ -50,6 +52,18 @@ export function LoginPage() {
       username: formData.get("username") as string,
       password: formData.get("password") as string,
     });
+  }
+
+  if (isPending) {
+    return (
+      <main className="bg-muted flex min-h-screen items-center justify-center px-4">
+        <h1 className="text-primary text-3xl font-bold">Loading...</h1>
+      </main>
+    );
+  }
+
+  if (user) {
+    return <Navigate to="/" replace />;
   }
 
   return (
@@ -101,5 +115,3 @@ export function LoginPage() {
     </main>
   );
 }
-
-export default LoginPage;

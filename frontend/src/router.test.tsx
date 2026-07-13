@@ -5,11 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 import { BrowserRouter, useLocation } from "react-router";
 
 vi.mock("./pages/items-page", () => ({ default: () => <h1>Items</h1> }));
-vi.mock("./pages/stores-page", () => ({ StoresPage: () => <h1>Stores</h1> }));
+vi.mock("./pages/stores-page", () => ({ default: () => <h1>Stores</h1> }));
 
 import { apiFetch } from "./api";
 import { App } from "./app";
-import { useAuth } from "./providers/auth-provider";
+import { AuthProvider, useAuth } from "./providers/auth-provider";
+import { QueryProvider } from "./providers/query-provider";
 
 function renderAt(pathname: string, response: Response) {
   window.history.replaceState({}, "", pathname);
@@ -117,9 +118,11 @@ describe("routes", () => {
 
     render(
       <BrowserRouter>
-        <App>
-          <ProtectedRequest />
-        </App>
+        <QueryProvider>
+          <AuthProvider>
+            <ProtectedRequest />
+          </AuthProvider>
+        </QueryProvider>
       </BrowserRouter>
     );
 
