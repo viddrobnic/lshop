@@ -32,7 +32,7 @@ pub async fn create(
 ) -> Result<Item, sqlx::Error> {
     let now = time::OffsetDateTime::now_utc();
 
-    let mut tx = db.begin().await?;
+    let mut tx = db.begin_with("BEGIN IMMEDIATE").await?;
     let curr_ord = max_ord(&mut *tx, store_id, section_id).await?;
     let ord = curr_ord + 1;
 
@@ -82,7 +82,7 @@ pub async fn organize(
     store_id: i64,
     update: &HashMap<i64, Vec<i64>>,
 ) -> Result<(), sqlx::Error> {
-    let mut tx = db.begin().await?;
+    let mut tx = db.begin_with("BEGIN IMMEDIATE").await?;
 
     for (section_id, items) in update.iter() {
         organize_section(&mut tx, store_id, *section_id, items).await?
@@ -104,7 +104,7 @@ pub async fn rename(db: &Db, id: i64, name: &str) -> Result<Option<Item>, sqlx::
 
 pub async fn set_checked(db: &Db, id: i64) -> Result<Option<Item>, sqlx::Error> {
     let now = time::OffsetDateTime::now_utc();
-    let mut tx = db.begin().await?;
+    let mut tx = db.begin_with("BEGIN IMMEDIATE").await?;
 
     let Some(item): Option<Item> = sqlx::query_as("SELECT * FROM items WHERE id = ?")
         .bind(id)
@@ -152,7 +152,7 @@ pub async fn move_item(
 ) -> Result<Option<Item>, sqlx::Error> {
     let now = time::OffsetDateTime::now_utc();
 
-    let mut tx = db.begin().await?;
+    let mut tx = db.begin_with("BEGIN IMMEDIATE").await?;
 
     let Some(item): Option<Item> =
         sqlx::query_as("SELECT * FROM items WHERE id = ? AND checked = FALSE")
