@@ -11,6 +11,8 @@ import {
 import { pointerIntersection } from "@dnd-kit/collision";
 import {
   ChevronRightIcon,
+  ChevronsDownUpIcon,
+  ChevronsUpDownIcon,
   PackageIcon,
   PlusIcon,
   SparklesIcon,
@@ -79,6 +81,7 @@ export default function ItemsPage() {
   const containersRef = useRef(containers);
   const snapshotRef = useRef<ItemContainers | null>(null);
   const [activeItem, setActiveItem] = useState<Item | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
   const itemMap = itemsQuery.data
     ? buildItemMap(itemsQuery.data)
     : new Map<number, Item>();
@@ -190,6 +193,28 @@ export default function ItemsPage() {
       </p>
     );
   const total = getTotal(itemsQuery.data);
+  const collapsibleIds = [
+    "global-unassigned",
+    ...itemsQuery.data.stores.flatMap((store) => [
+      `store-${String(store.id)}`,
+      formatContainerId({ storeId: store.id }),
+      ...store.sections.map((section) =>
+        formatContainerId({
+          storeId: section.store_id,
+          sectionId: section.id,
+        })
+      ),
+    ]),
+  ];
+  const allExpanded = collapsibleIds.every((id) => expandedIds.has(id));
+  const setExpanded = (id: string, open: boolean) => {
+    setExpandedIds((current) => {
+      const next = new Set(current);
+      if (open) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
 
   return (
     <>
@@ -200,10 +225,27 @@ export default function ItemsPage() {
         }}
       />
       <ItemCheckerProvider>
-        <div className="flex items-center px-4">
-          <h1 className="text-primary text-3xl font-bold">Items</h1>
+        <div className="flex items-center justify-between gap-3 px-4">
+          <div className="min-w-0">
+            <h1 className="text-primary text-3xl font-bold">Items</h1>
+            <p className="text-sm">{total} total items</p>
+          </div>
+          <Button
+            type="button"
+            size="lg"
+            variant="secondary"
+            onClick={() => {
+              setExpandedIds(allExpanded ? new Set() : new Set(collapsibleIds));
+            }}
+          >
+            {allExpanded ? (
+              <ChevronsDownUpIcon data-icon="inline-start" />
+            ) : (
+              <ChevronsUpDownIcon data-icon="inline-start" />
+            )}
+            {allExpanded ? "Collapse all" : "Expand all"}
+          </Button>
         </div>
-        <div className="px-4 text-sm">{total} total items</div>
         <DragDropProvider
           onDragStart={handleDragStart}
           onDragOver={handleDragOver}
@@ -221,6 +263,10 @@ export default function ItemsPage() {
               disabled={moveMutation.isPending}
               addTarget={{}}
               onAddItem={setAddItemTarget}
+              open={expandedIds.has("global-unassigned")}
+              onOpenChange={(open) => {
+                setExpanded("global-unassigned", open);
+              }}
             />
             {itemsQuery.data.stores.map((store) => (
               <StoreItems
@@ -230,6 +276,8 @@ export default function ItemsPage() {
                 itemMap={itemMap}
                 movePending={moveMutation.isPending}
                 onAddItem={setAddItemTarget}
+                expandedIds={expandedIds}
+                onOpenChange={setExpanded}
               />
             ))}
           </div>
@@ -248,12 +296,16 @@ function StoreItems({
   itemMap,
   movePending,
   onAddItem,
+  expandedIds,
+  onOpenChange,
 }: {
   store: ItemListStore;
   containers: ItemContainers;
   itemMap: Map<number, Item>;
   movePending: boolean;
   onAddItem: OpenAddItem;
+  expandedIds: Set<string>;
+  onOpenChange: (id: string, open: boolean) => void;
 }) {
   const queryClient = useQueryClient();
   const organize = useMutation({
@@ -273,8 +325,14 @@ function StoreItems({
     disabled,
     collisionDetector: pointerIntersection,
   });
+  const storeCollapsibleId = `store-${String(store.id)}`;
   return (
-    <Collapsible>
+    <Collapsible
+      open={expandedIds.has(storeCollapsibleId)}
+      onOpenChange={(open) => {
+        onOpenChange(storeCollapsibleId, open);
+      }}
+    >
       <div
         ref={storeDropRef}
         className={cn(
@@ -336,6 +394,10 @@ function StoreItems({
           headerClass="top-14 z-20 pl-7"
           disabled={disabled}
           onAddItem={onAddItem}
+          open={expandedIds.has(formatContainerId({ storeId: store.id }))}
+          onOpenChange={(open) => {
+            onOpenChange(formatContainerId({ storeId: store.id }), open);
+          }}
         />
         {store.sections.map((section) => (
           <ItemContainer
@@ -356,6 +418,21 @@ function StoreItems({
               section_id: section.id,
             }}
             onAddItem={onAddItem}
+            open={expandedIds.has(
+              formatContainerId({
+                storeId: section.store_id,
+                sectionId: section.id,
+              })
+            )}
+            onOpenChange={(open) => {
+              onOpenChange(
+                formatContainerId({
+                  storeId: section.store_id,
+                  sectionId: section.id,
+                }),
+                open
+              );
+            }}
           />
         ))}
       </CollapsibleContent>
@@ -374,6 +451,8 @@ function ItemContainer({
   disabled,
   addTarget,
   onAddItem,
+  open,
+  onOpenChange,
 }: {
   title: string;
   icon: ReactNode;
@@ -385,6 +464,8 @@ function ItemContainer({
   disabled: boolean;
   addTarget?: AddItemTarget;
   onAddItem: OpenAddItem;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   // Containers establish the pointer's destination first; sortable rows then use closest-center within it.
   const { ref, isDropTarget } = useDroppable({
@@ -394,7 +475,7 @@ function ItemContainer({
   });
   const itemIds = getContainerItems(containers, containerId);
   return (
-    <Collapsible asChild>
+    <Collapsible asChild open={open} onOpenChange={onOpenChange}>
       <section ref={ref}>
         <div
           className={cn(
