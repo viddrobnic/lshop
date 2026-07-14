@@ -39,11 +39,9 @@ I currently don't provide any setup scripts, but this app should be quite easy t
 2. Build frontend
    ```sh
    cd frontend
-   npm install --legacy-peer-deps
+   npm install
    npm run build
    ```
-
-The frontend currently needs `--legacy-peer-deps` during install because of upstream peer dependency conflicts in the toolchain.
 
 ### Configure Backend
 
@@ -114,6 +112,26 @@ shop.example.com {
     }
 }
 ```
+
+## AI Usage Disclosure
+
+> [!NOTE]
+> Frontend part of the project is heavily vibe coded. Original, non vibed frontend lives in `original-frontend` branch.
+
+At the beginning, backend and frontend were both engineered and **not** vibe coded. The frontend was written in Solid.
+Because of reasons not relevant for this section, I wanted to rewrite it to React. When GPT 5.6 Sol came out, I decided
+to try it out by rewriting this from Solid to React. It generally worked quite well.
+
+I only perused the generated code, so I can't say all (or any) of it is quality code. But specifically for this project
+the end result is good enough, and I even added a few frontend-only features by just vibing them. There are a few
+reasons why the frontend of this project works purely on vibes; even though I am usually opposed to just slopping
+something together:
+
+- It was originally written by me, so the UX was thought through. This removed the need for AI to be creative and solve
+  actual problems.
+- It is a _very_ small app. The main frontend file is `items-page.tsx`, which contains less than 600 lines of code.
+- It is for my personal use only. The app has exactly two users, one of them being myself. It doesn't matter if it breaks,
+  or if some things don't work. I can fix them in my own time.
 
 ## License
 
