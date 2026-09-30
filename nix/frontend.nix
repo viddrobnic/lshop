@@ -1,85 +1,92 @@
-{ pkgs, ... }:
-let
-  src = ../frontend;
-
-  mkNpmCheck =
-    { name, script }:
-    pkgs.buildNpmPackage {
-      inherit src;
-      pname = name;
-      version = "0.1.0";
-
-      npmDeps = pkgs.importNpmLock { npmRoot = src; };
-      npmConfigHook = pkgs.importNpmLock.npmConfigHook;
-      npmFlags = [ "--legacy-peer-deps" ];
-
-      dontNpmBuild = true;
-
-      doCheck = true;
-      checkPhase = ''
-        runHook preCheck
-        npm run ${script}
-        runHook postCheck
-      '';
-    };
-
-in
+{ ... }:
 {
-  package = pkgs.buildNpmPackage {
-    inherit src;
-    name = "lshop-frontend";
-    version = "0.1.0";
+  perSystem =
+    { config, pkgs, ... }:
+    let
+      src = ../frontend;
 
-    npmDeps = pkgs.importNpmLock { npmRoot = src; };
-    npmConfigHook = pkgs.importNpmLock.npmConfigHook;
-    npmFlags = [ "--legacy-peer-deps" ];
+      nodejs = pkgs.nodejs_26;
+      npmDeps = pkgs.fetchNpmDeps {
+        inherit src;
+        hash = "sha256-sssEBY7Aw101j3RBBxOI0IAC+60OeB+UKPqF3Vg3qvI=";
+      };
+      commonArgs = {
+        version = "0.1.0";
+        inherit src nodejs npmDeps;
+      };
 
-    npmBuildScript = "build";
+      mkNpmCheck =
+        { name, script }:
+        pkgs.buildNpmPackage (
+          commonArgs
+          // {
+            pname = name;
 
-    nativeBuildInputs = with pkgs; [
-      coreutils
-      findutils
-    ];
+            dontNpmBuild = true;
 
-    installPhase = ''
-      runHook preInstall
+            doCheck = true;
+            checkPhase = ''
+              runHook preCheck
+              npm run ${script}
+              runHook postCheck
+            '';
+          }
+        );
 
-      mkdir -p $out
-      cp -r dist/* $out/
+    in
+    {
+      packages.frontend = pkgs.buildNpmPackage (
+        commonArgs
+        // {
+          name = "lshop-frontend";
 
-      # Generate content-based ETag sidecar files for Caddy.
-      find $out -type f \
-        ! -name '*.etag' \
-        ! -name '*.br' \
-        ! -name '*.gz' \
-        ! -name '*.zst' \
-        -print0 |
-      while IFS= read -r -d ''' file; do
-        hash="$(sha256sum "$file" | cut -d' ' -f1)"
-        printf '"%s"\n' "$hash" > "$file.etag"
-      done
+          npmBuildScript = "build";
 
-      runHook postInstall
-    '';
-  };
+          nativeBuildInputs = with pkgs; [
+            coreutils
+            findutils
+          ];
 
-  checks = {
-    # Note: We don't include package here as a check. This is done in the flake.
+          installPhase = ''
+            runHook preInstall
 
-    lint = mkNpmCheck {
-      name = "lint";
-      script = "lint";
+            mkdir -p $out
+            cp -r dist/* $out/
+
+            # Generate content-based ETag sidecar files for Caddy.
+            find $out -type f \
+              ! -name '*.etag' \
+              ! -name '*.br' \
+              ! -name '*.gz' \
+              ! -name '*.zst' \
+              -print0 |
+            while IFS= read -r -d ''' file; do
+              hash="$(sha256sum "$file" | cut -d' ' -f1)"
+              printf '"%s"\n' "$hash" > "$file.etag"
+            done
+
+            runHook postInstall
+          '';
+        }
+      );
+
+      checks = {
+        frontend = config.packages.frontend;
+
+        frontend-lint = mkNpmCheck {
+          name = "lint";
+          script = "lint";
+        };
+
+        frontend-prettier = mkNpmCheck {
+          name = "prettier";
+          script = "prettier:check";
+        };
+
+        frontend-check = mkNpmCheck {
+          name = "tsc";
+          script = "tsc";
+        };
+      };
     };
-
-    prettier = mkNpmCheck {
-      name = "prettier";
-      script = "prettier:check";
-    };
-
-    check = mkNpmCheck {
-      name = "tsc";
-      script = "tsc";
-    };
-
-  };
 }

@@ -3,76 +3,49 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-
     crane.url = "github:ipetkov/crane";
-
-    rust-overlay = {
-      url = "github:oxalica/rust-overlay";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    flake-utils.url = "github:numtide/flake-utils";
+    flake-parts.url = "github:hercules-ci/flake-parts";
   };
 
   outputs =
     inputs@{
       nixpkgs,
-      flake-utils,
-      rust-overlay,
       crane,
+      flake-parts,
       ...
     }:
-    flake-utils.lib.eachDefaultSystem (
-      system:
-      let
-        pkgs = import nixpkgs {
-          inherit system;
-          overlays = [ rust-overlay.overlays.default ];
-        };
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "aarch64-darwin"
+      ];
 
-        craneLib = (crane.mkLib pkgs).overrideToolchain (
-          p:
-          p.rust-bin.stable.latest.default.override {
-            extensions = [
-              "rust-src"
-              "rust-analyzer"
-              "llvm-tools"
+      imports = [
+        ./nix/backend.nix
+        ./nix/frontend.nix
+      ];
+
+      perSystem =
+        {
+          pkgs,
+          craneLib,
+          config,
+          ...
+        }:
+        {
+          _module.args.craneLib = crane.mkLib pkgs;
+
+          devShells.default = craneLib.devShell {
+            checks = config.checks;
+
+            packages = with pkgs; [
+              rust-analyzer
+              nodejs_26
             ];
-          }
-        );
+          };
 
-        args = inputs // {
-          inherit pkgs system craneLib;
+          formatter = pkgs.nixfmt-tree;
         };
-
-        backend = import ./nix/backend.nix args;
-        frontend = import ./nix/frontend.nix args;
-      in
-      {
-        packages = {
-          backend = backend.package;
-          frontend = frontend.package;
-        };
-
-        checks = {
-          backend = backend.package;
-          frontend = frontend.package;
-        }
-        // pkgs.lib.mapAttrs' (name: value: {
-          name = "backend-${name}";
-          value = value;
-        }) backend.checks
-        // pkgs.lib.mapAttrs' (name: value: {
-          name = "frontend-${name}";
-          value = value;
-        }) frontend.checks;
-
-        devShells.default = craneLib.devShell {
-          checks = backend.checks;
-          packages = [ pkgs.nodejs_24 ];
-        };
-
-        formatter = nixpkgs.legacyPackages.${system}.nixfmt-tree;
-      }
-    );
+    };
 }

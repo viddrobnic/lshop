@@ -1,45 +1,47 @@
-{ pkgs, craneLib, ... }:
-let
-  inherit (pkgs) lib;
-
-  src = lib.fileset.toSource {
-    root = ../backend;
-    fileset = lib.fileset.unions [
-      (craneLib.fileset.commonCargoSources ../backend)
-      ../backend/migrations
-    ];
-  };
-
-  commonArgs = {
-    inherit src;
-    strictDeps = true;
-  };
-
-  cargoArtifacts = craneLib.buildDepsOnly commonArgs;
-
-  lshop-backend = craneLib.buildPackage (commonArgs // { inherit cargoArtifacts; });
-in
+{ lib, ... }:
 {
-  package = lshop-backend;
+  perSystem =
+    { pkgs, craneLib, ... }:
+    let
+      src = lib.fileset.toSource {
+        root = ../backend;
+        fileset = lib.fileset.unions [
+          (craneLib.fileset.commonCargoSources ../backend)
+          ../backend/migrations
+        ];
+      };
 
-  checks = {
-    # Note: We don't include package here as a check. This is done in the flake.
+      commonArgs = {
+        inherit src;
+        strictDeps = true;
+      };
 
-    clippy = craneLib.cargoClippy (
-      commonArgs
-      // {
-        inherit cargoArtifacts;
-        cargoClippyExtraArgs = "--all-features";
-      }
-    );
+      cargoArtifacts = craneLib.buildDepsOnly commonArgs;
 
-    # Check formatting
-    fmt = craneLib.cargoFmt {
-      inherit src;
+      lshop-backend = craneLib.buildPackage (commonArgs // { inherit cargoArtifacts; });
+    in
+    {
+      packages.backend = lshop-backend;
+
+      checks = {
+        backend = lshop-backend;
+
+        backend-clippy = craneLib.cargoClippy (
+          commonArgs
+          // {
+            inherit cargoArtifacts;
+            cargoClippyExtraArgs = "--all-features";
+          }
+        );
+
+        # Check formatting
+        backend-fmt = craneLib.cargoFmt {
+          inherit src;
+        };
+
+        backend-toml-fmt = craneLib.taploFmt {
+          src = pkgs.lib.sources.sourceFilesBySuffices src [ ".toml" ];
+        };
+      };
     };
-
-    toml-fmt = craneLib.taploFmt {
-      src = pkgs.lib.sources.sourceFilesBySuffices src [ ".toml" ];
-    };
-  };
 }
