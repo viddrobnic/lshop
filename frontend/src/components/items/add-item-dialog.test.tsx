@@ -47,7 +47,13 @@ const pointerCaptureDescriptors = Object.fromEntries(
 );
 
 describe("AddItemDialog", () => {
+  let disableAnimations: HTMLStyleElement;
+
   beforeEach(() => {
+    // jsdom applies vaul's exit animation but never fires animationend.
+    disableAnimations = document.createElement("style");
+    disableAnimations.textContent = "* { animation: none !important; }";
+    document.head.append(disableAnimations);
     Object.defineProperties(HTMLElement.prototype, {
       hasPointerCapture: { configurable: true, value: vi.fn(() => false) },
       releasePointerCapture: { configurable: true, value: vi.fn() },
@@ -57,6 +63,7 @@ describe("AddItemDialog", () => {
 
   afterEach(() => {
     cleanup();
+    disableAnimations.remove();
     Object.defineProperties(HTMLElement.prototype, pointerCaptureDescriptors);
     vi.unstubAllGlobals();
   });

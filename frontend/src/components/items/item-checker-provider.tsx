@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -26,29 +26,18 @@ export function ItemCheckerProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const clearTimer = () => {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = null;
-  };
+  const actions = useMemo(() => {
+    const clearTimer = () => {
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = null;
+    };
 
-  const flush = () => {
-    timer.current = null;
-    const batchIds = [...pendingIdsRef.current];
-    if (batchIds.length === 0) return;
-
-    pendingIdsRef.current = new Set();
-    setPendingIds(pendingIdsRef.current);
-    committingIdsRef.current = new Set([
-      ...committingIdsRef.current,
-      ...batchIds,
-    ]);
-    setCommittingIds(committingIdsRef.current);
-
-    void Promise.allSettled(
-      batchIds.map((itemId) =>
-        apiFetch(`/items/${String(itemId)}/checked`, { method: "PUT" })
-      )
-    ).then(async (results) => {
+    const commit = async (batchIds: number[]) => {
+      const results = await Promise.allSettled(
+        batchIds.map((itemId) =>
+          apiFetch(`/items/${String(itemId)}/checked`, { method: "PUT" })
+        )
+      );
       const failedCount = results.filter(
         (result) => result.status === "rejected"
       ).length;
@@ -66,44 +55,64 @@ export function ItemCheckerProvider({ children }: { children: ReactNode }) {
       for (const itemId of batchIds) next.delete(itemId);
       committingIdsRef.current = next;
       setCommittingIds(next);
-    });
-  };
+    };
 
-  const scheduleFlush = () => {
-    clearTimer();
-    timer.current = setTimeout(flush, CHECK_DELAY_MS);
-  };
+    const flush = () => {
+      timer.current = null;
+      const batchIds = [...pendingIdsRef.current];
+      if (batchIds.length === 0) return;
 
-  const check = (itemId: number) => {
-    if (
-      pendingIdsRef.current.has(itemId) ||
-      committingIdsRef.current.has(itemId)
-    )
-      return;
-    pendingIdsRef.current = new Set(pendingIdsRef.current).add(itemId);
-    setPendingIds(pendingIdsRef.current);
-    scheduleFlush();
-  };
+      pendingIdsRef.current = new Set();
+      setPendingIds(pendingIdsRef.current);
+      committingIdsRef.current = new Set([
+        ...committingIdsRef.current,
+        ...batchIds,
+      ]);
+      setCommittingIds(committingIdsRef.current);
+      void commit(batchIds);
+    };
 
-  const uncheck = (itemId: number) => {
-    if (committingIdsRef.current.has(itemId)) return;
-    const next = new Set(pendingIdsRef.current);
-    next.delete(itemId);
-    pendingIdsRef.current = next;
-    setPendingIds(next);
-    if (next.size > 0) scheduleFlush();
-    else clearTimer();
-  };
+    const scheduleFlush = () => {
+      clearTimer();
+      timer.current = setTimeout(flush, CHECK_DELAY_MS);
+    };
+
+    const check = (itemId: number) => {
+      if (
+        pendingIdsRef.current.has(itemId) ||
+        committingIdsRef.current.has(itemId)
+      )
+        return;
+      pendingIdsRef.current = new Set(pendingIdsRef.current).add(itemId);
+      setPendingIds(pendingIdsRef.current);
+      scheduleFlush();
+    };
+
+    const uncheck = (itemId: number) => {
+      if (committingIdsRef.current.has(itemId)) return;
+      const next = new Set(pendingIdsRef.current);
+      next.delete(itemId);
+      pendingIdsRef.current = next;
+      setPendingIds(next);
+      if (next.size > 0) scheduleFlush();
+      else clearTimer();
+    };
+
+    return { check, uncheck };
+  }, [queryClient]);
+
+  const value = useMemo(
+    () => ({
+      isPendingChecked: (id: number) =>
+        pendingIds.has(id) || committingIds.has(id),
+      isCommittingChecked: (id: number) => committingIds.has(id),
+      ...actions,
+    }),
+    [pendingIds, committingIds, actions]
+  );
 
   return (
-    <ItemCheckerContext.Provider
-      value={{
-        isPendingChecked: (id) => pendingIds.has(id) || committingIds.has(id),
-        isCommittingChecked: (id) => committingIds.has(id),
-        check,
-        uncheck,
-      }}
-    >
+    <ItemCheckerContext.Provider value={value}>
       {children}
     </ItemCheckerContext.Provider>
   );

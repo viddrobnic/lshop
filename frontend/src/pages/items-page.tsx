@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   DragDropProvider,
@@ -121,9 +127,13 @@ export default function ItemsPage() {
     setContainers(resolved);
   };
 
+  const syncContainers = useEffectEvent((data: ItemList) => {
+    updateContainers(buildItemContainers(data));
+  });
+
   useEffect(() => {
     if (itemsQuery.data && !activeItem && !moveMutation.isPending)
-      updateContainers(buildItemContainers(itemsQuery.data));
+      syncContainers(itemsQuery.data);
   }, [itemsQuery.data, activeItem, moveMutation.isPending]);
 
   const handleDragStart = ({ operation }: DragStartEvent) => {

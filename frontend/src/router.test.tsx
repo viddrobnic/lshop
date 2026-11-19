@@ -30,6 +30,17 @@ function renderAt(pathname: string, response: Response) {
   );
 }
 
+function ProtectedRequest() {
+  const { user } = useAuth();
+  useQuery({
+    queryKey: ["protected"],
+    queryFn: () => apiFetch("/items"),
+    enabled: Boolean(user),
+    retry: false,
+  });
+  return <p>{useLocation().pathname}</p>;
+}
+
 describe("routes", () => {
   afterEach(() => {
     cleanup();
@@ -104,17 +115,6 @@ describe("routes", () => {
         removeEventListener: vi.fn(),
       }))
     );
-
-    function ProtectedRequest() {
-      const { user } = useAuth();
-      useQuery({
-        queryKey: ["protected"],
-        queryFn: () => apiFetch("/items"),
-        enabled: Boolean(user),
-        retry: false,
-      });
-      return <p>{useLocation().pathname}</p>;
-    }
 
     render(
       <BrowserRouter>

@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { apiFetch, UnauthorizedError } from "@/api";
@@ -38,13 +38,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     retry: false,
   });
 
-  return (
-    <AuthContext.Provider
-      value={{ user: query.data, isPending: query.isPending }}
-    >
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({ user: query.data, isPending: query.isPending }),
+    [query.data, query.isPending]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthContextValue {

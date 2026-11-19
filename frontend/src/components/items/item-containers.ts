@@ -70,10 +70,9 @@ export function parseContainerId(containerId: string): ContainerTarget | null {
 }
 
 export function buildItemContainers(list: ItemList): ItemContainers {
-  const containers = {} as ItemContainers;
-  containers[GLOBAL_UNASSIGNED_CONTAINER_ID] = list.unassigned.map(
-    (item) => item.id
-  );
+  const containers = {
+    [GLOBAL_UNASSIGNED_CONTAINER_ID]: list.unassigned.map((item) => item.id),
+  } as ItemContainers;
 
   for (const store of list.stores) {
     containers[formatContainerId({ storeId: store.id })] = store.unassigned.map(

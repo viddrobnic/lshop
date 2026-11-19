@@ -29,11 +29,17 @@ export function AddItemDialog({
   const inputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const createItem = useMutation({
-    mutationFn: ({ name, target }: { name: string; target: AddItemTarget }) =>
+    mutationFn: ({
+      name,
+      target: itemTarget,
+    }: {
+      name: string;
+      target: AddItemTarget;
+    }) =>
       apiFetch("/items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, ...target }),
+        body: JSON.stringify({ name, ...itemTarget }),
       }),
     onError: () => toast.error("Failed to add item"),
   });

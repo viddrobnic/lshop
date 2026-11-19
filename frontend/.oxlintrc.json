@@ -1,0 +1,107 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "eslint",
+    "typescript",
+    "unicorn",
+    "oxc",
+    "react",
+    "jsx-a11y",
+    "import",
+    "promise",
+    "vitest"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "pedantic": "error",
+    "perf": "error"
+  },
+  "options": {
+    "typeAware": true
+  },
+  "env": {
+    "browser": true
+  },
+  "ignorePatterns": ["dist/**"],
+  "rules": {
+    "max-classes-per-file": "off",
+    "max-lines": "off",
+    "max-lines-per-function": "off",
+    "no-negated-condition": "off",
+    "require-unicode-regexp": "off",
+    "import/max-dependencies": "off",
+    "import/no-unassigned-import": "off",
+    "react/react-in-jsx-scope": "off",
+    "typescript/consistent-return": "off",
+    "typescript/no-unsafe-type-assertion": "off",
+    "typescript/prefer-readonly-parameter-types": "off",
+    "typescript/strict-boolean-expressions": "off",
+    "unicorn/no-negated-condition": "off",
+    "unicorn/prefer-query-selector": "off",
+    "unicorn/prefer-type-error": "off",
+    "vitest/no-conditional-in-test": "off",
+    "vitest/require-mock-type-parameters": "off",
+
+    "no-empty": "error",
+    "no-regex-spaces": "error",
+    "no-var": "error",
+    "prefer-const": "error",
+    "prefer-rest-params": "error",
+    "prefer-spread": "error",
+    "react/no-unknown-property": "error",
+    "react/only-export-components": ["error", { "allowConstantExport": true }],
+    "typescript/ban-ts-comment": ["error", { "minimumDescriptionLength": 10 }],
+    "typescript/no-dynamic-delete": "error",
+    "typescript/no-empty-object-type": "error",
+    "typescript/no-explicit-any": "error",
+    "typescript/no-invalid-void-type": "error",
+    "typescript/no-namespace": "error",
+    "typescript/no-non-null-assertion": "error",
+    "typescript/no-require-imports": "error",
+    "typescript/prefer-literal-enum-member": "error",
+    "typescript/prefer-reduce-type-parameter": "error",
+    "typescript/prefer-return-this-type": "error",
+    "typescript/restrict-plus-operands": [
+      "error",
+      {
+        "allowAny": false,
+        "allowBoolean": false,
+        "allowNullish": false,
+        "allowNumberAndString": false,
+        "allowRegExp": false
+      }
+    ],
+    "typescript/restrict-template-expressions": [
+      "error",
+      {
+        "allowAny": false,
+        "allowBoolean": false,
+        "allowNever": false,
+        "allowNullish": false,
+        "allowNumber": false,
+        "allowRegExp": false
+      }
+    ],
+    "typescript/return-await": ["error", "error-handling-correctness-only"],
+    "typescript/unified-signatures": "error",
+    "typescript/use-unknown-in-catch-callback-variable": "error"
+  },
+  "overrides": [
+    {
+      "files": ["src/components/ui/**/*.{ts,tsx}"],
+      "rules": {
+        "jsx-a11y/prefer-tag-over-role": "off"
+      }
+    },
+    {
+      "files": [
+        "src/components/ui/**/*.{ts,tsx}",
+        "src/providers/auth-provider.tsx"
+      ],
+      "rules": {
+        "react/only-export-components": "off"
+      }
+    }
+  ]
+}
