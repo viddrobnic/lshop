@@ -8,7 +8,7 @@
       nodejs = pkgs.nodejs_26;
       npmDeps = pkgs.fetchNpmDeps {
         inherit src;
-        hash = "sha256-sssEBY7Aw101j3RBBxOI0IAC+60OeB+UKPqF3Vg3qvI=";
+        hash = "sha256-ZFGBHPDRnCzlPNlr8nar6dOe45irLtfPbYFlce1wU2M=";
       };
       commonArgs = {
         version = "0.1.0";
@@ -78,9 +78,9 @@
           script = "lint";
         };
 
-        frontend-prettier = mkNpmCheck {
-          name = "prettier";
-          script = "prettier:check";
+        frontend-fmt = mkNpmCheck {
+          name = "fmt";
+          script = "fmt:check";
         };
 
         frontend-check = mkNpmCheck {
